@@ -25,7 +25,7 @@ jobs:
           LDFLAGS+=' -lstdc++fs'
           
           mkdir bin
-          g++ ${CXXFLAGS} ${LDFLAGS} -o bin/java_remove_symbols src/java_remove_symbols.cpp
-          g++ ${CXXFLAGS} ${LDFLAGS} -o bin/java_remove_symbols_test src/java_remove_symbols_test.cpp
+          g++ ${CXXFLAGS} -o bin/java_remove_symbols src/java_remove_symbols.cpp ${LDFLAGS}
+          g++ ${CXXFLAGS} -o bin/java_remove_symbols_test src/java_remove_symbols_test.cpp ${LDFLAGS}
       - name: Test
         run: ./bin/java_remove_symbols_test
