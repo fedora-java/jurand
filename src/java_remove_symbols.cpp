@@ -6,15 +6,20 @@
 
 using namespace java_symbols;
 
+static bool std_ends_with(const std::string& string, std::string_view suffix)
+{
+	return string.length() >= suffix.length() and suffix == std::string_view(string.c_str() + string.length() - suffix.length(), suffix.length());
+}
+
 int main(int argc, const char** argv)
 {
-	auto args = std::span<const char*>(argv + 1, argc - 1);
+	auto args = std_span<const char*>(argv + 1, argc - 1);
 	
 	auto parameter_dict = parse_arguments(args, {"-a", "--dry-run"});
 	
-	auto default_root = std::array<std::string, 1> {"."};
+	auto default_root = std::array<std::string, 1>({"."});
 	
-	auto fileroots = std::span<std::string>(default_root);
+	auto fileroots = std_span<std::string>(default_root);
 	
 	const auto parameters = interpret_args(parameter_dict);
 	
@@ -40,7 +45,7 @@ int main(int argc, const char** argv)
 			{
 				to_handle = std::move(dir_entry);
 				
-				if (to_handle.is_regular_file() and to_handle.path().native().ends_with(".java"))
+				if (to_handle.is_regular_file() and std_ends_with(to_handle.path().native(), ".java"))
 				{
 					files.emplace_back(std::move(to_handle));
 				}
@@ -51,17 +56,18 @@ int main(int argc, const char** argv)
 	auto errors_mtx = std::mutex();
 	auto errors = std::vector<std::string>();
 	
-	auto jthreads = std::vector<std::jthread>(std::max(1u, std::thread::hardware_concurrency()));
+	// auto threads = std::vector<std::jthread>(std::max(1u, std::thread::hardware_concurrency()));
+	auto threads = std::vector<std::thread>(std::max(1u, std::thread::hardware_concurrency()));
 	
 	{
 		auto begin = std::size_t(0);
 		
-		for (std::size_t i = 0; i != std::size(jthreads); ++i)
+		for (std::size_t i = 0; i != std::size(threads); ++i)
 		{
-			auto remainder = std::size(files) % std::size(jthreads);
-			auto length = std::size(files) / std::size(jthreads) + bool(i < remainder);
+			auto remainder = std::size(files) % std::size(threads);
+			auto length = std::size(files) / std::size(threads) + bool(i < remainder);
 			
-			jthreads[i] = std::jthread([&, begin, length]() noexcept -> void
+			threads[i] = std::thread([&, begin, length]() noexcept -> void
 			{
 				for (auto j = begin; j != begin + length; ++j)
 				{
@@ -81,7 +87,12 @@ int main(int argc, const char** argv)
 		}
 	}
 	
-	jthreads.clear();
+	for (auto& thread : threads)
+	{
+		thread.join();
+	}
+	
+	threads.clear();
 	
 	if (not errors.empty())
 	{
