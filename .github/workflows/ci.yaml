@@ -16,6 +16,7 @@ jobs:
         run: dnf -y install gcc-c++ libasan libubsan
       - name: Compile
         run: |
+          set -x
           CXXFLAGS+=' -std=c++2a -Isrc -Wall -Wextra -Wpedantic -g'
           CXXFLAGS+=' -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG'
           CXXFLAGS+=' -fsanitize=address,undefined'
