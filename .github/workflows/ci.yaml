@@ -24,6 +24,10 @@ jobs:
           CXXFLAGS+=' -fconcepts'
           LDFLAGS+=' -lstdc++fs'
           
+          export CXX
+          export CXXFLAGS
+          export LDFLAGS
+          
           ./build.sh
       - name: Test
         run: ./test.sh
