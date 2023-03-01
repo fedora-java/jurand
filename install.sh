@@ -10,7 +10,7 @@ install_file()
 	local target_dir="${1}"; shift
 	
 	for source_file in "${@}"; do
-		install -m "${attr}" -p -D -t "${target_dir}" "${source_file}"
+		install -m "${attr}" -p -D -t "${buildroot}/${target_dir}" "${source_file}"
 		echo "${target_dir}/${source_file##*/}" >> "${metafile}"
 	done
 }
