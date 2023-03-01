@@ -1,0 +1,30 @@
+name: Continuous Integration
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: ubi8:latest
+    steps:
+      - name: Checkout git repository
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: dnf -y install gcc-c++ libasan libubsan
+      - name: Compile
+        run: |
+          CXXFLAGS+=' -std=c++2a -Isrc -Wall -Wextra -Wpedantic -g'
+          CXXFLAGS+=' -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG'
+          CXXFLAGS+=' -fsanitize=address,undefined'
+          
+          CXXFLAGS+=' -fconcepts'
+          LDFLAGS+=' -lstdc++fs'
+          
+          mkdir bin
+          g++ ${CXXFLAGS} ${LDFLAGS} -o bin/java_remove_symbols src/java_remove_symbols.cpp
+          g++ ${CXXFLAGS} ${LDFLAGS} -o bin/java_remove_symbols_test src/java_remove_symbols_test.cpp
+      - name: Test
+        run: ./bin/java_remove_symbols_test
