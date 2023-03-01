@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ubi8:latest
+    container: registry.access.redhat.com/ubi8:latest
     steps:
       - name: Checkout git repository
         uses: actions/checkout@v3
