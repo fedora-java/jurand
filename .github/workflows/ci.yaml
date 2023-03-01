@@ -17,15 +17,13 @@ jobs:
       - name: Compile
         run: |
           set -x
-          CXXFLAGS+=' -std=c++2a -Isrc -Wall -Wextra -Wpedantic -g'
-          CXXFLAGS+=' -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG'
+          CXX=g++
+          CXXFLAGS+=' -g -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG'
           CXXFLAGS+=' -fsanitize=address,undefined'
           
           CXXFLAGS+=' -fconcepts'
           LDFLAGS+=' -lstdc++fs'
           
-          mkdir bin
-          g++ ${CXXFLAGS} -o bin/java_remove_symbols src/java_remove_symbols.cpp ${LDFLAGS}
-          g++ ${CXXFLAGS} -o bin/java_remove_symbols_test src/java_remove_symbols_test.cpp ${LDFLAGS}
+          ./build.sh
       - name: Test
-        run: ./bin/java_remove_symbols_test
+        run: ./test.sh
