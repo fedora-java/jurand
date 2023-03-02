@@ -11,7 +11,10 @@ install_file()
 	
 	for source_file in "${@}"; do
 		install -m "${attr}" -p -D -t "${buildroot}/${target_dir}" "${source_file}"
-		echo "${target_dir}/${source_file##*/}" >> "${metafile}"
+		if [ "${target_dir}" = "${mandir}" ]; then
+			local suffix=".gz"
+		fi
+		echo "${target_dir}/${source_file##*/}${suffix:-}" >> "${metafile}"
 	done
 }
 
