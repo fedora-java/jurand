@@ -416,8 +416,11 @@ inline std::tuple<std::string, suffix_string_set> remove_imports(
 			const auto empty_set = transparent_string_set();
 			const auto* names_passed = &names;
 			
+			bool is_static = false;
+			
 			if (symbol == "static")
 			{
+				is_static = true;
 				names_passed = &empty_set;
 				symbol = next_symbol(content, end_pos);
 				end_pos = symbol.end() - content.begin();
@@ -448,11 +451,23 @@ inline std::tuple<std::string, suffix_string_set> remove_imports(
 			
 			copy_end = end_pos;
 			
-			if (name_matches(import_name, patterns, *names_passed, {}))
+			bool matches = name_matches(import_name, patterns, *names_passed, {});
+			
+			if (is_static)
+			{
+				if (auto pos = import_name.rfind('.'); pos != import_name.npos)
+				{
+					auto import_nonstatic_name = std::string_view(import_name.begin(), import_name.begin() + pos);
+					matches = matches or name_matches(import_nonstatic_name, patterns, names, {});
+				}
+			}
+			
+			if (matches)
 			{
 				copy_end = next_position;
 				
-				if (not std_ends_with(import_name, "*"))
+				//! Add only non-star and non-static imports
+				if (not std_ends_with(import_name, "*") and not is_static)
 				{
 					removed_classes.emplace(import_name);
 				}

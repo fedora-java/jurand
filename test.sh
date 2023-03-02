@@ -28,3 +28,9 @@ test_file "Fqn.java" "Fqn.1.java" -a -n "D"
 
 test_file "Collision.java" "Collision.1.java" -a -p "something"
 test_file "Collision.java" "Collision.2.java" -a -p "annotations"
+
+test_file "Static_import.java" "Static_import.1.java" -a -n "C"
+test_file "Static_import.java" "Static_import.2.java" -a -p "b"
+test_file "Static_import.java" "Static_import.2.java" -a -n "b"
+
+test_file "Static_import_collision.java" "Static_import_collision.1.java" -a -n "C"

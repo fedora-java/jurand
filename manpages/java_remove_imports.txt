@@ -49,6 +49,7 @@ Examples of patterns:
 - Names used to match:
 
     Name 'Runnable' matches 1)
+    Name 'String' matches 4)
 
     Name 'util' does not match anything.
     Name '*' does not match anything.
