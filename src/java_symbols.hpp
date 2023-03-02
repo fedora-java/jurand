@@ -112,18 +112,7 @@ struct transparent_string_cmp : std::less<std::string_view>
 };
 
 using transparent_string_set = std::set<std::string, transparent_string_cmp>;
-
-struct suffix_string_cmp
-{
-	using is_transparent = void;
-	
-	bool operator()(std::string_view lhs, std::string_view rhs) const noexcept
-	{
-		return std::lexicographical_compare(lhs.rbegin(), lhs.rend(), rhs.rbegin(), rhs.rend());
-	}
-};
-
-using suffix_string_set = std::set<std::string, suffix_string_cmp>;
+using transparent_string_map = std::map<std::string, std::string, transparent_string_cmp>;
 
 using parameter_dict = std::map<std::string, std::vector<std::string>, transparent_string_cmp>;
 
@@ -354,7 +343,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
  * @return The simple class name.
  */
 inline bool name_matches(std::string_view name, std_span<const std::regex> patterns,
-	const transparent_string_set& names, const suffix_string_set& imported_names) noexcept
+	const transparent_string_set& names, const transparent_string_map& imported_names) noexcept
 {
 	auto simple_name = name;
 	
@@ -368,16 +357,9 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
 		return true;
 	}
 	
-	if (name != simple_name)
+	if (auto it = imported_names.find(simple_name); it != imported_names.end())
 	{
-		if (std_contains(imported_names, name))
-		{
-			return true;
-		}
-	}
-	else
-	{
-		if (imported_names.lower_bound("." + std::string(simple_name)) != imported_names.end())
+		if (name == simple_name or it->second == name)
 		{
 			return true;
 		}
@@ -394,13 +376,13 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
 	return false;
 }
 
-inline std::tuple<std::string, suffix_string_set> remove_imports(
+inline std::tuple<std::string, transparent_string_map> remove_imports(
 	std::string_view content, std_span<const std::regex> patterns, const transparent_string_set& names)
 {
 	auto position = std::ptrdiff_t(0);
 	auto result = std::string();
 	result.reserve(content.size());
-	auto removed_classes = suffix_string_set();
+	auto removed_classes = transparent_string_map();
 	
 	while (position < std_ssize(content))
 	{
@@ -466,10 +448,17 @@ inline std::tuple<std::string, suffix_string_set> remove_imports(
 			{
 				copy_end = next_position;
 				
+				auto simple_import_name = std::string();
+				
+				if (auto pos = import_name.rfind('.'); pos != import_name.npos)
+				{
+					simple_import_name = import_name.substr(pos + 1);
+				}
+				
 				//! Add only non-star and non-static imports
 				if (not std_ends_with(import_name, "*") and not is_static)
 				{
-					removed_classes.emplace(import_name);
+					removed_classes.try_emplace(std::move(simple_import_name), std::move(import_name));
 				}
 			}
 			
@@ -484,7 +473,7 @@ inline std::tuple<std::string, suffix_string_set> remove_imports(
 }
 
 inline std::string remove_annotations(std::string_view content, std_span<const std::regex> patterns,
-	const transparent_string_set& names, const suffix_string_set& imported_names)
+	const transparent_string_set& names, const transparent_string_map& imported_names)
 {
 	auto position = std::ptrdiff_t(0);
 	auto result = std::string();
