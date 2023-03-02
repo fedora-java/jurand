@@ -27,6 +27,11 @@ inline bool std_contains(const auto& range, const auto& value) noexcept
 	return range.find(value) != range.end();
 }
 
+inline bool std_ends_with(const std::string& string, std::string_view suffix)
+{
+	return string.length() >= suffix.length() and suffix == std::string_view(string.c_str() + string.length() - suffix.length(), suffix.length());
+}
+
 struct std_osyncstream
 {
 	~std_osyncstream()
@@ -107,6 +112,18 @@ struct transparent_string_cmp : std::less<std::string_view>
 };
 
 using transparent_string_set = std::set<std::string, transparent_string_cmp>;
+
+struct suffix_string_cmp
+{
+	using is_transparent = void;
+	
+	bool operator()(std::string_view lhs, std::string_view rhs) const noexcept
+	{
+		return std::lexicographical_compare(lhs.rbegin(), lhs.rend(), rhs.rbegin(), rhs.rend());
+	}
+};
+
+using suffix_string_set = std::set<std::string, suffix_string_cmp>;
 
 using parameter_dict = std::map<std::string, std::vector<std::string>, transparent_string_cmp>;
 
@@ -336,39 +353,54 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
  * code, it will be catched by the other matchers.
  * @return The simple class name.
  */
-inline std::string_view name_matches(std::string_view name, std_span<const std::regex> patterns,
-	const transparent_string_set& names, const transparent_string_set& imported_names) noexcept
+inline bool name_matches(std::string_view name, std_span<const std::regex> patterns,
+	const transparent_string_set& names, const suffix_string_set& imported_names) noexcept
 {
-	auto class_name = name;
+	auto simple_name = name;
 	
 	if (auto pos = name.rfind('.'); pos != name.npos)
 	{
-		class_name = name.substr(pos + 1);
+		simple_name = name.substr(pos + 1);
 	}
 	
-	if (std_contains(names, class_name) or std_contains(imported_names, class_name))
+	if (std_contains(names, simple_name))
 	{
-		return class_name;
+		return true;
+	}
+	
+	if (name != simple_name)
+	{
+		if (std_contains(imported_names, name))
+		{
+			return true;
+		}
+	}
+	else
+	{
+		if (imported_names.lower_bound("." + std::string(simple_name)) != imported_names.end())
+		{
+			return true;
+		}
 	}
 	
 	for (const auto& pattern : patterns)
 	{
 		if (std::regex_search(name.begin(), name.end(), pattern))
 		{
-			return class_name;
+			return true;
 		}
 	}
 	
-	return std::string_view();
+	return false;
 }
 
-inline std::tuple<std::string, transparent_string_set> remove_imports(
+inline std::tuple<std::string, suffix_string_set> remove_imports(
 	std::string_view content, std_span<const std::regex> patterns, const transparent_string_set& names)
 {
 	auto position = std::ptrdiff_t(0);
 	auto result = std::string();
 	result.reserve(content.size());
-	transparent_string_set removed_classes;
+	auto removed_classes = suffix_string_set();
 	
 	while (position < std_ssize(content))
 	{
@@ -381,8 +413,8 @@ inline std::tuple<std::string, transparent_string_set> remove_imports(
 			auto symbol = next_symbol(content, next_position + 6);
 			auto end_pos = symbol.end() - content.begin();
 			
-			const transparent_string_set empty_set;
-			const transparent_string_set* names_passed = &names;
+			const auto empty_set = transparent_string_set();
+			const auto* names_passed = &names;
 			
 			if (symbol == "static")
 			{
@@ -416,15 +448,13 @@ inline std::tuple<std::string, transparent_string_set> remove_imports(
 			
 			copy_end = end_pos;
 			
-			auto class_name = name_matches(import_name, patterns, *names_passed, {});
-			
-			if (not class_name.empty())
+			if (name_matches(import_name, patterns, *names_passed, {}))
 			{
 				copy_end = next_position;
 				
-				if (class_name != "*")
+				if (not std_ends_with(import_name, "*"))
 				{
-					removed_classes.emplace(class_name);
+					removed_classes.emplace(import_name);
 				}
 			}
 			
@@ -439,7 +469,7 @@ inline std::tuple<std::string, transparent_string_set> remove_imports(
 }
 
 inline std::string remove_annotations(std::string_view content, std_span<const std::regex> patterns,
-	const transparent_string_set& names, const transparent_string_set& imported_names)
+	const transparent_string_set& names, const suffix_string_set& imported_names)
 {
 	auto position = std::ptrdiff_t(0);
 	auto result = std::string();
@@ -456,7 +486,7 @@ inline std::string remove_annotations(std::string_view content, std_span<const s
 			copy_end = annotation.end() - content.begin();
 			next_position = copy_end;
 			
-			if (not name_matches(annotation_name, patterns, names, imported_names).empty())
+			if (name_matches(annotation_name, patterns, names, imported_names))
 			{
 				copy_end = annotation.begin() - content.begin();
 				

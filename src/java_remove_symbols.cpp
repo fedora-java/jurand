@@ -6,11 +6,6 @@
 
 using namespace java_symbols;
 
-static bool std_ends_with(const std::string& string, std::string_view suffix)
-{
-	return string.length() >= suffix.length() and suffix == std::string_view(string.c_str() + string.length() - suffix.length(), suffix.length());
-}
-
 int main(int argc, const char** argv)
 {
 	auto args = std_span<const char*>(argv + 1, argc - 1);
