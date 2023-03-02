@@ -457,7 +457,7 @@ inline std::tuple<std::string, suffix_string_set> remove_imports(
 			{
 				if (auto pos = import_name.rfind('.'); pos != import_name.npos)
 				{
-					auto import_nonstatic_name = std::string_view(import_name.c_str(), import_name.c_str() + pos);
+					auto import_nonstatic_name = std::string_view(import_name.c_str(), pos);
 					matches = matches or name_matches(import_nonstatic_name, patterns, names, {});
 				}
 			}
