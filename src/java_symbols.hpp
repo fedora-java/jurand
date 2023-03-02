@@ -12,6 +12,7 @@
 #include <string_view>
 #include <tuple>
 #include <mutex>
+#include <optional>
 #include <type_traits>
 
 #include <iostream>
@@ -43,6 +44,12 @@ struct std_osyncstream
 	std_osyncstream& operator<<(const auto& value)
 	{
 		stream_ << value;
+		return *this;
+	}
+	
+	std_osyncstream& write(const char* content, std::streamsize length)
+	{
+		stream_.write(content, length);
 		return *this;
 	}
 	
@@ -108,7 +115,7 @@ struct Parameters
 	std::vector<std::regex> patterns_;
 	transparent_string_set names_;
 	bool also_remove_annotations_ = false;
-	bool dry_run_ = false;
+	bool in_place_ = false;
 };
 
 /*!
@@ -474,25 +481,50 @@ inline std::string remove_annotations(std::string_view content, std_span<const s
 	return result;
 }
 
+////////////////////////////////////////////////////////////////////////////////
+
+inline std::string handle_content(std::string_view content, const Parameters& parameters)
+{
+	auto [new_content, removed_classes] = remove_imports(content, parameters.patterns_, parameters.names_);
+	
+	if (parameters.also_remove_annotations_)
+	{
+		new_content = remove_annotations(new_content, parameters.patterns_, parameters.names_, removed_classes);
+	}
+	
+	return new_content;
+}
+
 inline std::string handle_file(std::filesystem::path path, const Parameters& parameters)
 {
 	auto original_content = std::string();
 	
+	if (path.empty())
+	{
+		original_content = std::string(std::istreambuf_iterator<char>(std::cin), {});
+	}
+	else
 	{
 		auto ifs = std::ifstream(path);
 		original_content = std::string(std::istreambuf_iterator<char>(ifs), {});
 	}
 	
-	auto [content, removed_classes] = remove_imports(original_content, parameters.patterns_, parameters.names_);
+	auto content = handle_content(original_content, parameters);
 	
-	if (parameters.also_remove_annotations_)
+	if (not parameters.in_place_)
 	{
-		content = remove_annotations(content, parameters.patterns_, parameters.names_, removed_classes);
+		auto osyncstream = std_osyncstream(std::cout);
+		
+		if (not path.empty())
+		{
+			osyncstream << path.native() << ":\n";
+		}
+		
+		osyncstream.write(content.c_str(), content.size());
 	}
-	
-	if (not parameters.dry_run_ and content.size() < original_content.size())
+	else if (content.size() < original_content.size())
 	{
-		std_osyncstream(std::cerr) << "Removing symbols from file " << path.native() << "\n";
+		std_osyncstream(std::clog) << "Removing symbols from file " << path.native() << "\n";
 		
 		auto ofs = std::ofstream(path);
 		ofs.write(content.c_str(), content.size());
@@ -501,7 +533,9 @@ inline std::string handle_file(std::filesystem::path path, const Parameters& par
 	return content;
 }
 
-inline parameter_dict parse_arguments(std_span<const char*> args, const transparent_string_set& no_argument_flags)
+////////////////////////////////////////////////////////////////////////////////
+
+inline std::optional<parameter_dict> parse_arguments(std_span<const char*> args, const transparent_string_set& no_argument_flags)
 {
 	auto result = parameter_dict();
 	auto unflagged_parameters = result.try_emplace("").first;
@@ -536,14 +570,7 @@ inline parameter_dict parse_arguments(std_span<const char*> args, const transpar
 	
 	if (args.empty() or print_help)
 	{
-		std::cout << &R"""(
-Usage: java_remove_symbols [-a] [list of file paths]... [-n <list of class names>...] [-p <list of patterns>...]
-    -a      Also remove annotations used in code
-    -n      List of simple (not fully-qualified) class names
-    -p      List of patterns to match names used in code
-
-    -h      Print help message
-)"""[1];
+		return {};
 	}
 	
 	return result;
@@ -576,9 +603,9 @@ inline Parameters interpret_args(const parameter_dict& parameters)
 		result.also_remove_annotations_ = true;
 	}
 	
-	if (std_contains(parameters, "--dry-run"))
+	if (std_contains(parameters, "-i") or std_contains(parameters, "--in_place"))
 	{
-		result.dry_run_ = true;
+		result.in_place_ = true;
 	}
 	
 	return result;

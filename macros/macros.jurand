@@ -4,7 +4,7 @@
 # 
 # Removes import statements from Java source files by matching them against the
 # lists of simple class names and patterns.
-%java_remove_imports %{_bindir}/java_remove_symbols
+%java_remove_imports %{_bindir}/java_remove_symbols -i
 
 
 # java_remove_annotations - remove imports and annotations from Java source
@@ -14,4 +14,4 @@
 # 
 # Removes import statements as well as usage of annotations from Java source
 # files by matching them against the lists of simple class names and patterns.
-%java_remove_annotations %{_bindir}/java_remove_symbols -a
+%java_remove_annotations %{_bindir}/java_remove_symbols -i -a
