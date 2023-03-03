@@ -502,7 +502,7 @@ inline std::string remove_annotations(std::string_view content, std_span<const s
 		auto next_position = std_ssize(content);
 		auto copy_end = std_ssize(content);
 		
-		if (annotation.begin() != content.end())
+		if (annotation.begin() != content.end() and annotation_name != "interface")
 		{
 			copy_end = annotation.end() - content.begin();
 			next_position = copy_end;
