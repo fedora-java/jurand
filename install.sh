@@ -18,6 +18,6 @@ install_file()
 	done
 }
 
-install_file 755 "${bindir}" target/bin/java_remove_symbols
+install_file 755 "${bindir}" target/bin/jurand
 install_file 644 "${rpmmacrodir}" macros/macros.jurand
 install_file 644 "${mandir}" target/manpages/*.7

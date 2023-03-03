@@ -2,7 +2,7 @@
 
 set -e
 
-./target/bin/java_remove_symbols_test
+./target/bin/jurand_test
 
 mkdir -p target/test_resources
 
@@ -12,7 +12,7 @@ test_file()
 	local expected="${1}"; shift
 	cp "test_resources/${filename}" "target/test_resources/${filename}"
 	cp "test_resources/${expected}" "target/test_resources/${expected}"
-	./target/bin/java_remove_symbols -i "target/test_resources/${filename}" "${@}"
+	./target/bin/jurand -i "target/test_resources/${filename}" "${@}"
 	diff -u "target/test_resources/${filename}" "target/test_resources/${expected}"
 }
 
