@@ -1,6 +1,6 @@
 # java_remove_imports - remove import statements from Java source files
 # 
-# Usage: *%java_remove_imports* [list of file paths]... [-n <list of class names>...] [-p <list of patterns>...]
+# Usage: *%java_remove_imports* [-n <simple class name>]... [-p <pattern>]... [file path]...
 # 
 # Removes import statements from Java source files by matching them against the
 # lists of simple class names and patterns.
@@ -10,7 +10,7 @@
 # java_remove_annotations - remove imports and annotations from Java source
 # files
 # 
-# Usage: *%java_remove_annotations* [list of file paths]... [-n <list of class names>...] [-p <list of patterns>...]
+# Usage: *%java_remove_annotations* [-n <simple class name>]... [-p <pattern>]... [file path]...
 # 
 # Removes import statements as well as usage of annotations from Java source
 # files by matching them against the lists of simple class names and patterns.

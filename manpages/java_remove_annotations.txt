@@ -1,8 +1,8 @@
 java_remove_annotations(7)
 ==========================
-:doctype:	manpage
-:man source:	JAVAPACKAGES
-:man manual:	Jurand
+:doctype:       manpage
+:man source:    JURAND
+:man manual:    Jurand
 
 NAME
 ----
@@ -10,7 +10,7 @@ java_remove_annotations - remove imports and annotations from Java source files
 
 SYNOPSIS
 --------
-*%java_remove_annotations* [list of file paths]... [-n <list of class names>...] [-p <list of patterns>...]
+*%java_remove_annotations* <matcher>... [file path]...
 
 DESCRIPTION
 -----------
@@ -22,22 +22,30 @@ either ending with whitespace or with an opening parethesis '('.
 In case of match, the script also removes the block of paretheses that follows
 the matched annotation, if it is present.
 
-If the file path is a directory, recursively finds all Java source files inside.
-If not specified, runs in the current working directory.
+File path arguments are handled the following way:
 
-*-n*::
-List of simple class names to be matched against the simple names of imported
-symbols. Names are matched for exact equality.
+* Symlinks are ignored
+* Regular files are handled regardless of the file name
+* Directories are traversed recursively and all `.java` files are handled
 
-*-p*::
-List of regex patterns to be matched against found annotations. Each imported
-symbol found in the code is matched against each pattern.
+Order of arguments is irrelevant.
+
+Matcher is one of:
+
+*-n <name>*::
+Simple class name to be matched against the simple names of imported symbols.
+Names are matched for exact equality. Can be specified multiple times.
+
+*-p <pattern>*::
+Regex patterns to be matched against imported symbols. Each imported symbol
+found in the code is matched against each pattern. Can be specified multiple
+times.
 
 EXAMPLES
 --------
 Example of usage:
 
-*%java_remove_annotations -n Nullable*
+*%java_remove_annotations src -n Nullable*
 
 Examples of patterns:
 
@@ -72,7 +80,7 @@ Written by Marián Konček.
 REPORTING BUGS
 --------------
 Bugs should be reported through the issue tracker at
-Github: https://github.com/fedora-java/jurand/issues.
+GitHub: https://github.com/fedora-java/jurand/issues.
 
 SEE ALSO
 --------

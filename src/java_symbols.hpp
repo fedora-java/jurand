@@ -599,23 +599,17 @@ inline std::string handle_file(std::filesystem::path path, const Parameters& par
 
 ////////////////////////////////////////////////////////////////////////////////
 
-inline std::optional<parameter_dict> parse_arguments(std_span<const char*> args, const transparent_string_set& no_argument_flags)
+inline parameter_dict parse_arguments(std_span<const char*> args, const transparent_string_set& no_argument_flags)
 {
 	auto result = parameter_dict();
 	auto unflagged_parameters = result.try_emplace("").first;
 	auto last_flag = unflagged_parameters;
-	bool print_help = false;
 	
 	for (std::string_view arg : args)
 	{
-		if (arg == "--")
+		if (arg == "-h" or arg == "--help")
 		{
-			last_flag = unflagged_parameters;
-		}
-		else if (arg == "-h")
-		{
-			print_help = true;
-			break;
+			return parameter_dict();
 		}
 		else if (arg.size() >= 2 and arg[0] == '-' and (std::isalnum(arg[1]) or (arg[1] == '-')))
 		{
@@ -629,12 +623,8 @@ inline std::optional<parameter_dict> parse_arguments(std_span<const char*> args,
 		else
 		{
 			last_flag->second.emplace_back(arg);
+			last_flag = unflagged_parameters;
 		}
-	}
-	
-	if (args.empty() or print_help)
-	{
-		return {};
 	}
 	
 	return result;
