@@ -22,5 +22,5 @@ sources) against the provided regex pattern.
 The tool writes the results to standard output unless `-i` option is specified
 in which case it will replace the original files' content.
 
-If any of the file paths if a directory then the tool does recursive file search
+If any of the file paths is a directory then the tool does recursive file search
 itself.
