@@ -557,6 +557,13 @@ inline std::string handle_file(std::filesystem::path path, const Parameters& par
 	else
 	{
 		auto ifs = std::ifstream(path);
+		
+		if (ifs.fail())
+		{
+			throw std::runtime_error("Could not open file for reading: " + path.native());
+		}
+		
+		ifs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
 		original_content = std::string(std::istreambuf_iterator<char>(ifs), {});
 	}
 	
@@ -575,10 +582,16 @@ inline std::string handle_file(std::filesystem::path path, const Parameters& par
 	}
 	else if (content.size() < original_content.size())
 	{
-		std_osyncstream(std::clog) << "Removing symbols from file " << path.native() << "\n";
-		
 		auto ofs = std::ofstream(path);
+		
+		if (ofs.fail())
+		{
+			throw std::runtime_error("Could not open file for writing: " + path.native());
+		}
+		
+		ofs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
 		ofs.write(content.c_str(), content.size());
+		std_osyncstream(std::clog) << "Removing symbols from file " << path.native() << "\n";
 	}
 	
 	return content;
