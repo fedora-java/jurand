@@ -2,6 +2,12 @@
 
 A tool for manipulating symbols present in `.java` source files.
 
+The tool can be used for patching `.java` sources in cases where using `sed` is
+insufficient due to Java language syntax. The tool follows Java language rules
+rather than applying simple regular expressions on the source code.
+
+Currently the tool is able to remove `import` statements and annotations.
+
 ## Usage
 
 	jurand [-a] [list of file paths]... [-n <list of class names>...] [-p <list of patterns>...]
