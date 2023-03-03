@@ -6,13 +6,19 @@ set -e
 
 mkdir -p target/test_resources
 
+run_tool()
+{
+	local filename="${1}"; shift
+	cp "test_resources/${filename}" "target/test_resources/${filename}"
+	./target/bin/jurand -i "target/test_resources/${filename}" "${@}"
+}
+
 test_file()
 {
 	local filename="${1}"; shift
 	local expected="${1}"; shift
-	cp "test_resources/${filename}" "target/test_resources/${filename}"
 	cp "test_resources/${expected}" "target/test_resources/${expected}"
-	./target/bin/jurand -i "target/test_resources/${filename}" "${@}"
+	run_tool "${filename}" "${@}"
 	diff -u "target/test_resources/${filename}" "target/test_resources/${expected}"
 }
 
@@ -44,5 +50,14 @@ test_file "Garbage.java" "Garbage.1.java" -a -n "Nullable"
 test_file "Imports.java" "Imports.0.java" -a -p "static"
 test_file "Imports.java" "Imports.1.java" -a -p "util"
 test_file "Imports.java" "Imports.2.java" -a -p "java[.]lang[.]"
+
+# The purpose of these tests is to check that the tool does not loop, the
+# result is irrelevant
+run_tool "Termination.1.java" -n "C" || :
+run_tool "Termination.2.java" -a -n "C" || :
+run_tool "Termination.3.java" -a -n "C" || :
+run_tool "Termination.4.java" -a -n "C" || :
+run_tool "Termination.5.java" -a -n "C" || :
+run_tool "Termination.6.java" -a -n "C" || :
 
 echo PASSED

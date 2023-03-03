@@ -137,7 +137,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		
 		for (const auto& error : errors)
 		{
-			std::cout << "* " << error << "\n";
+			std::cout << "- " << error << "\n";
 		}
 		
 		return 2;

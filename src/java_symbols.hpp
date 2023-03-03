@@ -124,10 +124,16 @@ struct Parameters
 	bool in_place_ = false;
 };
 
+struct Parse_error : std::runtime_error
+{
+	using std::runtime_error::runtime_error;
+};
+
 /*!
  * Iterates over @p string starting at @p position to find the first character
  * which is not part of a Java comment nor a whitespace character.
- * @return The position of the first non-whitespace non-comment charater or the
+ * 
+ * @return The position of the first non-whitespace non-comment character or the
  * length of the string if none is found.
  */
 inline std::ptrdiff_t ignore_whitespace_comments(std::string_view string, std::ptrdiff_t position) noexcept
@@ -155,7 +161,14 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view string, std::p
 		}
 		else if (subst == "/*")
 		{
-			position = string.find("*/", position + 2) + 2;
+			position = string.find("*/", position + 2);
+			
+			if (position == std::ptrdiff_t(string.npos))
+			{
+				return std_ssize(string);
+			}
+			
+			position += 2;
 		}
 		
 		if (result == position)
@@ -214,7 +227,8 @@ inline bool is_identifier_char(char c) noexcept
  * @param alphanumeric If true, considers only tokens that are surrounded by
  * whitespace, comments or are at the boundaries of @p string.
  * 
- * @return The starting index or the length of @p string.
+ * @return The starting index of the token or the length of @p string if not
+ * found.
  */
 inline std::ptrdiff_t find_token(std::string_view string, std::string_view token,
 	std::ptrdiff_t position = 0, bool alphanumeric = false, std::ptrdiff_t stack = 0) noexcept
@@ -294,7 +308,7 @@ inline std::ptrdiff_t find_token(std::string_view string, std::string_view token
  * the @p string and the name of the annotation with all whitespace and comments
  * stripped.
  */
-inline std::tuple<std::string_view, std::string> next_annotation(std::string_view string, std::ptrdiff_t position = 0) noexcept
+inline std::tuple<std::string_view, std::string> next_annotation(std::string_view string, std::ptrdiff_t position = 0)
 {
 	auto result = std::string();
 	auto end_pos = std_ssize(string);
@@ -308,14 +322,24 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 		end_pos = symbol.end() - string.begin();
 		auto new_end_pos = end_pos;
 		
-		while (true)
+		while (not symbol.empty())
 		{
 			if (expecting_dot and symbol != ".")
 			{
 				if (symbol == "(")
 				{
-					end_pos = find_token(string, ")", new_end_pos) + 1;
+					end_pos = find_token(string, ")", new_end_pos);
+					
+					if (end_pos == std_ssize(string))
+					{
+						throw Parse_error("Reached EOF before reaching the end of closing parenthesis of annotation");
+					}
+					else
+					{
+						++end_pos;
+					}
 				}
+				
 				break;
 			}
 			
@@ -327,7 +351,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 		}
 	}
 	
-	return std::tuple(string.substr(position, end_pos - position), result);
+	return std::tuple(string.substr(position, end_pos - position), std::move(result));
 }
 
 /*!
@@ -340,6 +364,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
  * used in their simple form in code (therefore they refer to the removed
  * import declaration. If a name is used in its fully-qualified form in the
  * code, it will be catched by the other matchers.
+ * 
  * @return The simple class name.
  */
 inline bool name_matches(std::string_view name, std_span<const std::regex> patterns,
@@ -420,6 +445,11 @@ inline std::tuple<std::string, transparent_string_map> remove_imports(
 			
 			while (symbol != ";")
 			{
+				if (symbol.empty())
+				{
+					throw Parse_error("Reached EOF before reaching the closing ';' of an import statement");
+				}
+				
 				import_name += symbol;
 				symbol = next_symbol(content, end_pos);
 				end_pos = symbol.end() - content.begin();
@@ -547,6 +577,7 @@ inline std::string handle_content(std::string_view content, const Parameters& pa
 }
 
 inline std::string handle_file(std::filesystem::path path, const Parameters& parameters)
+try
 {
 	auto original_content = std::string();
 	
@@ -560,7 +591,7 @@ inline std::string handle_file(std::filesystem::path path, const Parameters& par
 		
 		if (ifs.fail())
 		{
-			throw std::runtime_error("Could not open file for reading: " + path.native());
+			throw std::runtime_error("Could not open file for reading");
 		}
 		
 		ifs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
@@ -586,7 +617,7 @@ inline std::string handle_file(std::filesystem::path path, const Parameters& par
 		
 		if (ofs.fail())
 		{
-			throw std::runtime_error("Could not open file for writing: " + path.native());
+			throw std::runtime_error("Could not open file for writing");
 		}
 		
 		ofs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
@@ -595,6 +626,17 @@ inline std::string handle_file(std::filesystem::path path, const Parameters& par
 	}
 	
 	return content;
+}
+catch (std::runtime_error& ex)
+{
+	auto message = (path.native().empty() ? "" : path.native() + ": ") + ex.what();
+	
+	if (dynamic_cast<Parse_error*>(&ex))
+	{
+		throw Parse_error(message);
+	}
+	
+	throw std::runtime_error(message);
 }
 
 ////////////////////////////////////////////////////////////////////////////////
