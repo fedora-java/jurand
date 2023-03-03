@@ -99,7 +99,7 @@ Usage: jurand [-a] [list of file paths]... [-n <list of class names>...] [-p <li
 						catch (std::exception& ex)
 						{
 							auto lg = std::lock_guard(errors_mtx);
-							errors.emplace_back(std::string("(") + typeid(ex).name() + ") " + ex.what());
+							errors.emplace_back(ex.what());
 						}
 					}
 				});
