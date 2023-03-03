@@ -376,6 +376,16 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
 	return false;
 }
 
+/*!
+ * Iterates over @p content to remove all import statements provided
+ * as @p patterns and @p names. Patterns match the string representation
+ * following the `import [static]` string. @p names matches only the simple
+ * class names.
+ * 
+ * @return The resulting string with import statements removed and a map of
+ * removed simple class names to the fully-qualified name as present in the
+ * import statement.
+ */
 inline std::tuple<std::string, transparent_string_map> remove_imports(
 	std::string_view content, std_span<const std::regex> patterns, const transparent_string_set& names)
 {
@@ -472,6 +482,13 @@ inline std::tuple<std::string, transparent_string_map> remove_imports(
 	return std::tuple(std::move(result), std::move(removed_classes));
 }
 
+/*!
+ * Iterates over @p content to remove all annotations provided as @p patterns
+ * and @p names. Patterns match the string representation of the annotations as
+ * present in the source code. @p names matches only the simple class names.
+ * 
+ * @return The resulting string with annotations removed.
+ */
 inline std::string remove_annotations(std::string_view content, std_span<const std::regex> patterns,
 	const transparent_string_set& names, const transparent_string_map& imported_names)
 {
