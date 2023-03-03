@@ -469,7 +469,7 @@ inline std::tuple<std::string, transparent_string_map> remove_imports(
 		position = next_position;
 	}
 	
-	return {std::move(result), std::move(removed_classes)};
+	return std::tuple(std::move(result), std::move(removed_classes));
 }
 
 inline std::string remove_annotations(std::string_view content, std_span<const std::regex> patterns,
