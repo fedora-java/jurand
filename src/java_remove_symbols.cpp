@@ -58,15 +58,18 @@ Usage: jurand [-a] [list of file paths]... [-n <list of class names>...] [-p <li
 			
 			if (to_handle.is_regular_file())
 			{
-				files.emplace_back(std::move(to_handle));
+				if (not to_handle.is_symlink())
+				{
+					files.emplace_back(std::move(to_handle));
+				}
 			}
-			else
+			else if (to_handle.is_directory())
 			{
 				for (auto& dir_entry : std::filesystem::recursive_directory_iterator(fileroot))
 				{
 					to_handle = std::move(dir_entry);
 					
-					if (to_handle.is_regular_file() and std_ends_with(to_handle.path().native(), ".java"))
+					if (to_handle.is_regular_file() and not to_handle.is_symlink() and std_ends_with(to_handle.path().native(), ".java"))
 					{
 						files.emplace_back(std::move(to_handle));
 					}
