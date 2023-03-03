@@ -14,7 +14,7 @@ int main(int argc, const char** argv)
 	
 	if (not parameter_dict)
 	{
-		std::cout << &R"""(
+		std::cout << 1 + (R"""(
 Usage: jurand [-a] [list of file paths]... [-n <list of class names>...] [-p <list of patterns>...]
     -a      also remove annotations used in code
     -n      list of simple (not fully-qualified) class names
@@ -24,7 +24,7 @@ Usage: jurand [-a] [list of file paths]... [-n <list of class names>...] [-p <li
             replace the contents of files
 
     -h      print help message
-)"""[1];
+)""");
 		return 0;
 	}
 	
