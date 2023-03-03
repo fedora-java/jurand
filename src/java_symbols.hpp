@@ -106,20 +106,20 @@ struct std_span
 namespace java_symbols
 {
 //! Allows comparison between string and string_view
-struct transparent_string_cmp : std::less<std::string_view>
+struct Transparent_string_cmp : std::less<std::string_view>
 {
 	using is_transparent = void;
 };
 
-using transparent_string_set = std::set<std::string, transparent_string_cmp>;
-using transparent_string_map = std::map<std::string, std::string, transparent_string_cmp>;
+using Transparent_string_set = std::set<std::string, Transparent_string_cmp>;
+using Transparent_string_map = std::map<std::string, std::string, Transparent_string_cmp>;
 
-using parameter_dict = std::map<std::string, std::vector<std::string>, transparent_string_cmp>;
+using Parameter_dict = std::map<std::string, std::vector<std::string>, Transparent_string_cmp>;
 
 struct Parameters
 {
 	std::vector<std::regex> patterns_;
-	transparent_string_set names_;
+	Transparent_string_set names_;
 	bool also_remove_annotations_ = false;
 	bool in_place_ = false;
 };
@@ -368,7 +368,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
  * @return The simple class name.
  */
 inline bool name_matches(std::string_view name, std_span<const std::regex> patterns,
-	const transparent_string_set& names, const transparent_string_map& imported_names) noexcept
+	const Transparent_string_set& names, const Transparent_string_map& imported_names) noexcept
 {
 	auto simple_name = name;
 	
@@ -411,13 +411,13 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
  * removed simple class names to the fully-qualified name as present in the
  * import statement.
  */
-inline std::tuple<std::string, transparent_string_map> remove_imports(
-	std::string_view content, std_span<const std::regex> patterns, const transparent_string_set& names)
+inline std::tuple<std::string, Transparent_string_map> remove_imports(
+	std::string_view content, std_span<const std::regex> patterns, const Transparent_string_set& names)
 {
 	auto position = std::ptrdiff_t(0);
 	auto result = std::string();
 	result.reserve(content.size());
-	auto removed_classes = transparent_string_map();
+	auto removed_classes = Transparent_string_map();
 	
 	while (position < std_ssize(content))
 	{
@@ -430,7 +430,7 @@ inline std::tuple<std::string, transparent_string_map> remove_imports(
 			auto symbol = next_symbol(content, next_position + 6);
 			auto end_pos = symbol.end() - content.begin();
 			
-			const auto empty_set = transparent_string_set();
+			const auto empty_set = Transparent_string_set();
 			const auto* names_passed = &names;
 			
 			bool is_static = false;
@@ -520,7 +520,7 @@ inline std::tuple<std::string, transparent_string_map> remove_imports(
  * @return The resulting string with annotations removed.
  */
 inline std::string remove_annotations(std::string_view content, std_span<const std::regex> patterns,
-	const transparent_string_set& names, const transparent_string_map& imported_names)
+	const Transparent_string_set& names, const Transparent_string_map& imported_names)
 {
 	auto position = std::ptrdiff_t(0);
 	auto result = std::string();
@@ -641,9 +641,9 @@ catch (std::runtime_error& ex)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-inline parameter_dict parse_arguments(std_span<const char*> args, const transparent_string_set& no_argument_flags)
+inline Parameter_dict parse_arguments(std_span<const char*> args, const Transparent_string_set& no_argument_flags)
 {
-	auto result = parameter_dict();
+	auto result = Parameter_dict();
 	auto unflagged_parameters = result.try_emplace("").first;
 	auto last_flag = unflagged_parameters;
 	
@@ -651,7 +651,7 @@ inline parameter_dict parse_arguments(std_span<const char*> args, const transpar
 	{
 		if (arg == "-h" or arg == "--help")
 		{
-			return parameter_dict();
+			return Parameter_dict();
 		}
 		else if (arg.size() >= 2 and arg[0] == '-' and (std::isalnum(arg[1]) or (arg[1] == '-')))
 		{
@@ -672,7 +672,7 @@ inline parameter_dict parse_arguments(std_span<const char*> args, const transpar
 	return result;
 }
 
-inline Parameters interpret_args(const parameter_dict& parameters)
+inline Parameters interpret_args(const Parameter_dict& parameters)
 {
 	auto result = Parameters();
 	
