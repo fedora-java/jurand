@@ -625,7 +625,7 @@ try
 	
 	return content;
 }
-catch (std::runtime_error& ex)
+catch (std::exception& ex)
 {
 	auto message = (path.native().empty() ? "" : path.native() + ": ") + ex.what();
 	throw std::runtime_error(message);
