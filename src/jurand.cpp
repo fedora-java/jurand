@@ -59,24 +59,29 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	auto files = std::vector<std::filesystem::path>();
 	files.reserve(32);
 	
-	for (const auto& fileroot : fileroots)
+	for (std::string& fileroot : fileroots)
 	{
-		auto to_handle = std::filesystem::directory_entry(std::filesystem::path(fileroot));
+		auto to_handle = std::filesystem::path(std::move(fileroot));
 		
-		if (to_handle.is_regular_file())
+		if (not std::filesystem::exists(to_handle))
 		{
-			if (not to_handle.is_symlink())
-			{
-				files.emplace_back(std::move(to_handle));
-			}
+			std::cout << to_handle.native() << ": File does not exist" << "\n";
+			return 2;
 		}
-		else if (to_handle.is_directory())
+		
+		if (std::filesystem::is_regular_file(to_handle) and not std::filesystem::is_symlink(to_handle))
 		{
-			for (auto& dir_entry : std::filesystem::recursive_directory_iterator(fileroot))
+			files.emplace_back(std::move(to_handle));
+		}
+		else if (std::filesystem::is_directory(to_handle))
+		{
+			for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(fileroot))
 			{
-				to_handle = std::move(dir_entry);
+				to_handle = dir_entry;
 				
-				if (to_handle.is_regular_file() and not to_handle.is_symlink() and std_ends_with(to_handle.path().native(), ".java"))
+				if (std::filesystem::is_regular_file(to_handle)
+					and not std::filesystem::is_symlink(to_handle)
+					and std_ends_with(to_handle.native(), ".java"))
 				{
 					files.emplace_back(std::move(to_handle));
 				}
