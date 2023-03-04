@@ -124,11 +124,6 @@ struct Parameters
 	bool in_place_ = false;
 };
 
-struct Parse_error : std::runtime_error
-{
-	using std::runtime_error::runtime_error;
-};
-
 /*!
  * Iterates over @p string starting at @p position to find the first character
  * which is not part of a Java comment nor a whitespace character.
@@ -332,12 +327,12 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 					
 					if (end_pos == std_ssize(string))
 					{
-						throw Parse_error("Reached EOF before reaching the end of closing parenthesis of annotation");
+						result = std::string();
+						position = end_pos;
+						break;
 					}
-					else
-					{
-						++end_pos;
-					}
+					
+					++end_pos;
 				}
 				
 				break;
@@ -447,7 +442,10 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 			{
 				if (symbol.empty())
 				{
-					throw Parse_error("Reached EOF before reaching the closing ';' of an import statement");
+					result.clear();
+					result.append(content);
+					removed_classes.clear();
+					return std::tuple(std::move(result), std::move(removed_classes));
 				}
 				
 				import_name += symbol;
@@ -630,12 +628,6 @@ try
 catch (std::runtime_error& ex)
 {
 	auto message = (path.native().empty() ? "" : path.native() + ": ") + ex.what();
-	
-	if (dynamic_cast<Parse_error*>(&ex))
-	{
-		throw Parse_error(message);
-	}
-	
 	throw std::runtime_error(message);
 }
 
