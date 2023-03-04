@@ -75,7 +75,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		}
 		else if (std::filesystem::is_directory(to_handle))
 		{
-			for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(fileroot))
+			for (const auto& dir_entry : std::filesystem::recursive_directory_iterator(to_handle))
 			{
 				to_handle = dir_entry;
 				
