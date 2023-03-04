@@ -180,11 +180,16 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view string, std::p
 	return position;
 }
 
+inline bool is_identifier_char(char c) noexcept
+{
+	return c == '_' or (not std::ispunct(c) and not std::isspace(c));
+}
+
 /*!
  * Iterates over @p string starting at @p position to find the next uncommented
- * symbol. and returns it and an index pointing past
- * it. The symbol is either a sequence of alphanumeric characters or a single
- * non-aphanumeric character or an empty string if the end has been reached.
+ * symbol. and returns it and an index pointing past it. The symbol is either a
+ * sequence of alphanumeric characters or a single non-aphanumeric character or
+ * an empty string if the end has been reached.
  */
 inline std::string_view next_symbol(std::string_view string, std::ptrdiff_t position = 0) noexcept
 {
@@ -198,9 +203,9 @@ inline std::string_view next_symbol(std::string_view string, std::ptrdiff_t posi
 		{
 			symbol_length = 1;
 			
-			if (std::isalnum(string[position]))
+			if (is_identifier_char(string[position]))
 			{
-				while (position + symbol_length != std_ssize(string) and std::isalnum(string[position + symbol_length]))
+				while (position + symbol_length != std_ssize(string) and is_identifier_char(string[position + symbol_length]))
 				{
 					++symbol_length;
 				}
@@ -209,11 +214,6 @@ inline std::string_view next_symbol(std::string_view string, std::ptrdiff_t posi
 	}
 	
 	return string.substr(position, symbol_length);
-}
-
-inline bool is_identifier_char(char c) noexcept
-{
-	return std::isalnum(c) or c == '_';
 }
 
 /*!

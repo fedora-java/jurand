@@ -25,6 +25,11 @@ test_file()
 test_file "Simple.java" "Simple.1.java" -a -n "D"
 test_file "Simple.java" "Simple.1.java" -a -p "a[.]b[.]c[.]D"
 
+test_file "Underscore.java" "Underscore.1.java" -n "b_c"
+test_file "Underscore.java" "Underscore.1.java" -p "a"
+test_file "Underscore.java" "Underscore.2.java" -a -n "b_c"
+test_file "Underscore.java" "Underscore.2.java" -a -p "a"
+
 test_file "Attributes.java" "Attributes.1.java" -a -n "D"
 test_file "Attributes.java" "Attributes.1.java" -a -p "a"
 
@@ -50,6 +55,10 @@ test_file "Garbage.java" "Garbage.1.java" -a -n "Nullable"
 test_file "Imports.java" "Imports.0.java" -a -p "static"
 test_file "Imports.java" "Imports.1.java" -a -p "util"
 test_file "Imports.java" "Imports.2.java" -a -p "java[.]lang[.]"
+
+test_file "Utf_8.java" "Utf_8.1.java" -n "č"
+test_file "Utf_8.java" "Utf_8.2.java" -a -n "č"
+test_file "Utf_8.java" "Utf_8.3.java" -a -n "ď"
 
 # The purpose of these tests is to check that the tool does not loop, the
 # result is irrelevant
