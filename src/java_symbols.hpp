@@ -636,6 +636,12 @@ catch (std::runtime_error& ex)
 inline Parameter_dict parse_arguments(std_span<const char*> args, const Transparent_string_set& no_argument_flags)
 {
 	auto result = Parameter_dict();
+	
+	if (args.empty())
+	{
+		return result;
+	}
+	
 	auto unflagged_parameters = result.try_emplace("").first;
 	auto last_flag = unflagged_parameters;
 	
