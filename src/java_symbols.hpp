@@ -699,7 +699,7 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 		result.also_remove_annotations_ = true;
 	}
 	
-	if (std_contains(parameters, "-i") or std_contains(parameters, "--in_place"))
+	if (std_contains(parameters, "-i") or std_contains(parameters, "--in-place"))
 	{
 		result.in_place_ = true;
 	}
