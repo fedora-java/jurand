@@ -22,11 +22,11 @@ jobs:
           CXXFLAGS+=' -fsanitize=address,undefined'
           
           CXXFLAGS+=' -fconcepts'
-          LDFLAGS+=' -lstdc++fs'
+          LDLIBS+=' -lstdc++fs'
           
           export CXX
           export CXXFLAGS
-          export LDFLAGS
+          export LDLIBS
           
           ./build.sh
       - name: Test
