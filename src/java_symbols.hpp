@@ -135,7 +135,7 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view string, std::p
 {
 	while (position != std_ssize(string))
 	{
-		if (std::isspace(string[position]))
+		if (std::isspace(static_cast<unsigned char>(string[position])))
 		{
 			++position;
 			continue;
@@ -177,7 +177,7 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view string, std::p
 
 inline bool is_identifier_char(char c) noexcept
 {
-	return c == '_' or (not std::ispunct(c) and not std::isspace(c));
+	return c == '_' or (not std::ispunct(static_cast<unsigned char>(c)) and not std::isspace(static_cast<unsigned char>(c)));
 }
 
 /*!
@@ -457,7 +457,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 			{
 				auto skip_space = end_pos;
 				
-				while (skip_space != std_ssize(content) and std::isspace(content[skip_space]))
+				while (skip_space != std_ssize(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
 				{
 					++skip_space;
 					
@@ -541,7 +541,7 @@ inline std::string remove_annotations(std::string_view content, std_span<const s
 				
 				auto skip_space = next_position;
 				
-				while (skip_space != std_ssize(content) and std::isspace(content[skip_space]))
+				while (skip_space != std_ssize(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
 				{
 					++skip_space;
 				}
@@ -651,7 +651,7 @@ inline Parameter_dict parse_arguments(std_span<const char*> args, const Transpar
 		{
 			return Parameter_dict();
 		}
-		else if (arg.size() >= 2 and arg[0] == '-' and (std::isalnum(arg[1]) or (arg[1] == '-')))
+		else if (arg.size() >= 2 and arg[0] == '-' and (std::isalnum(static_cast<unsigned char>(arg[1])) or (arg[1] == '-')))
 		{
 			last_flag = result.try_emplace(std::string(arg)).first;
 			
