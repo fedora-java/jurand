@@ -39,3 +39,5 @@ File path arguments are handled the following way:
 * Symlinks are ignored
 * Regular files are handled regardless of the file name
 * Directories are traversed recursively and all `.java` files are handled
+
+Unicode literals (`\uXXXX`) are currently not recognized.
