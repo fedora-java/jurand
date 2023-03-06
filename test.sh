@@ -4,13 +4,12 @@ set -e
 
 ./target/bin/jurand_test
 
+rm -rf target/test_resources
 mkdir -p target/test_resources
 
 run_tool()
 {
 	local filename="${1}"; shift
-	local target="target/test_resources/${filename}"
-	rm -r "${target}"
 	cp -r "test_resources/${filename}" "target/test_resources/${filename}"
 	./target/bin/jurand -i "target/test_resources/${filename}" "${@}"
 }
