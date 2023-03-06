@@ -9,7 +9,9 @@ mkdir -p target/test_resources
 run_tool()
 {
 	local filename="${1}"; shift
-	cp "test_resources/${filename}" "target/test_resources/${filename}"
+	local target="target/test_resources/${filename}"
+	rm -r "${target}"
+	cp -r "test_resources/${filename}" "target/test_resources/${filename}"
 	./target/bin/jurand -i "target/test_resources/${filename}" "${@}"
 }
 
@@ -68,5 +70,10 @@ run_tool "Termination.3.java" -a -n "C" || :
 run_tool "Termination.4.java" -a -n "C" || :
 run_tool "Termination.5.java" -a -n "C" || :
 run_tool "Termination.6.java" -a -n "C" || :
+
+run_tool "directory" -a -n "Annotation"
+for filename in A a/B a/b/C; do
+	diff -u "target/test_resources/directory/${filename}.java" "target/test_resources/directory/${filename}.1.java"
+done
 
 echo PASSED

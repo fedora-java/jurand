@@ -1,0 +1,3 @@
+@Annotation
+class A {
+}
