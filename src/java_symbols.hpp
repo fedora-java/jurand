@@ -103,6 +103,9 @@ struct std_span
 	Type* end_ = nullptr;
 };
 
+/*!
+ * Helper functions for manipulating java symbols
+ */
 namespace java_symbols
 {
 //! Allows comparison between string and string_view
@@ -301,8 +304,8 @@ inline std::ptrdiff_t find_token(std::string_view string, std::string_view token
  * 
  * @return A pair consisting of the whole extent of the annotation as present in
  * the @p string and the name of the annotation with all whitespace and comments
- * stripped. If no annotation is found, returns a view pointing past
- * the @p content with length 0 and an empty string.
+ * stripped. If no annotation is found, returns a view pointing past the
+ * @p content with length 0 and an empty string.
  */
 inline std::tuple<std::string_view, std::string> next_annotation(std::string_view string, std::ptrdiff_t position = 0)
 {
@@ -494,7 +497,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 					simple_import_name = import_name.substr(pos + 1);
 				}
 				
-				//! Add only non-star and non-static imports
+				// Add only non-star and non-static imports
 				if (not std_ends_with(import_name, "*") and not is_static)
 				{
 					removed_classes.try_emplace(std::move(simple_import_name), std::move(import_name));
