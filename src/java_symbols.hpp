@@ -27,6 +27,11 @@ inline bool std_contains(const auto& range, const auto& value) noexcept
 	return range.find(value) != range.end();
 }
 
+inline bool std_starts_with(std::string_view string, std::string_view prefix)
+{
+	return string.length() >= prefix.length() and prefix == std::string_view(string.data(), prefix.length());
+}
+
 inline bool std_ends_with(std::string_view string, std::string_view suffix)
 {
 	return string.length() >= suffix.length() and suffix == std::string_view(string.data() + string.length() - suffix.length(), suffix.length());
@@ -134,48 +139,184 @@ struct Parameters
  * @return The position of the first non-whitespace non-comment character or the
  * length of the string if none is found.
  */
-inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::ptrdiff_t position) noexcept
+inline std::string_view skip_whitespace(std::string_view content) noexcept
 {
-	while (position != std_ssize(content))
+	while (not content.empty())
 	{
-		if (std::isspace(static_cast<unsigned char>(content[position])))
+		if (std::isspace(static_cast<unsigned char>(content.front())))
 		{
-			++position;
+			content = content.substr(1);
 			continue;
 		}
 		
-		auto result = position;
+		if (std_starts_with(content, "\\u00"))
+		{
+			for (std::string_view numeric : {"32", "09", "10", "11", "12", "13"})
+			{
+				if (content.substr(4, 2) == numeric)
+				{
+					content = content.substr(6);
+					goto loop;
+				}
+			}
+		}
 		
-		if (auto subst = content.substr(position, 2); subst == "//")
+		break;
+		
+		loop:;
+	}
+	
+	return content;
+}
+
+inline std::string_view skip_line_comment(std::string_view content) noexcept
+{
+	if (content.empty())
+	{
+		return content;
+	}
+	
+	auto substr = content;
+	
+	if (substr.front() == '/')
+	{
+		substr = substr.substr(1);
+	}
+	else if (std_starts_with(substr, "\\u002f"))
+	{
+		substr = substr.substr(6);
+	}
+	
+	if (substr.empty())
+	{
+		return content;
+	}
+	
+	if (substr.front() == '/')
+	{
+		substr = substr.substr(1);
+	}
+	else if (std_starts_with(substr, "\\u002f"))
+	{
+		substr = substr.substr(6);
+	}
+	else
+	{
+		return content;
+	}
+	
+	while (not substr.empty())
+	{
+		if (substr.front() == '\n')
 		{
-			position = content.find('\n', position + 2);
-			
-			if (position == std::ptrdiff_t(content.npos))
-			{
-				return std_ssize(content);
-			}
-			
-			++position;
+			substr = substr.substr(1);
+			break;
 		}
-		else if (subst == "/*")
+		
+		substr = substr.substr(1);
+	}
+	
+	return substr;
+}
+
+
+inline std::string_view skip_multiline_comment(std::string_view content) noexcept
+{
+	if (content.empty())
+	{
+		return content;
+	}
+	
+	auto substr = content;
+	
+	if (substr.front() == '/')
+	{
+		substr = substr.substr(1);
+	}
+	else if (std_starts_with(substr, "\\u002f"))
+	{
+		substr = substr.substr(6);
+	}
+	else
+	{
+		return content;
+	}
+	
+	if (not substr.empty() and substr.front() == '*')
+	{
+		substr = substr.substr(1);
+	}
+	else if (std_starts_with(substr, "\\u002a"))
+	{
+		substr = substr.substr(6);
+	}
+	else
+	{
+		return content;
+	}
+	
+	while (not substr.empty())
+	{
+		if (substr.front() == '*')
 		{
-			position = content.find("*/", position + 2);
-			
-			if (position == std::ptrdiff_t(content.npos))
-			{
-				return std_ssize(content);
-			}
-			
-			position += 2;
+			substr = substr.substr(1);
 		}
+		else if (std_starts_with(substr, "\\u002a"))
+		{
+			substr = substr.substr(6);
+		}
+		else
+		{
+			substr = substr.substr(1);
+			continue;
+		}
+		
+		if (substr.empty())
+		{
+			// Questionable
+			return substr;
+		}
+		
+		if (substr.front() == '/')
+		{
+			substr = substr.substr(1);
+		}
+		else if (std_starts_with(substr, "\\u002f"))
+		{
+			substr = substr.substr(6);
+		}
+		else
+		{
+			substr = substr.substr(1);
+			continue;
+		}
+		
+		break;
+	}
+	
+	return substr;
+}
+
+inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::ptrdiff_t position) noexcept
+{
+	auto result = position;
+	
+	while (true)
+	{
+		result = position;
+		result = skip_whitespace(content.substr(result)).data() - content.data();
+		result = skip_line_comment(content.substr(result)).data() - content.data();
+		result = skip_multiline_comment(content.substr(result)).data() - content.data();
 		
 		if (result == position)
 		{
-			return result;
+			break;
 		}
+		
+		position = result;
 	}
 	
-	return position;
+	return result;
 }
 
 inline bool is_identifier_char(char c) noexcept
