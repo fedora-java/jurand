@@ -20,6 +20,8 @@ int main()
 	
 	assert_that(ignore_whitespace_comments("a", 0) == 0);
 	assert_that(ignore_whitespace_comments("ab", 1) == 1);
+	assert_that(ignore_whitespace_comments("/", 0) == 0);
+	assert_that(ignore_whitespace_comments("*", 0) == 0);
 	assert_that(ignore_whitespace_comments("//", 0) == 2);
 	assert_that(ignore_whitespace_comments("/**/", 0) == 4);
 	assert_that(ignore_whitespace_comments("/* a */", 0) == 7);
@@ -117,6 +119,7 @@ import com.google.common.util.concurrent.Service;)";
 		auto args = std::vector<std::regex>();
 		
 		args.emplace_back("Runnable");
+
 		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
 import java.util.List;
 import static java.util.*;
