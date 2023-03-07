@@ -27,6 +27,11 @@ inline bool std_contains(const auto& range, const auto& value) noexcept
 	return range.find(value) != range.end();
 }
 
+inline bool std_starts_with(std::string_view string, std::string_view prefix)
+{
+	return string.length() >= prefix.length() and prefix == std::string_view(string.data(), prefix.length());
+}
+
 inline bool std_ends_with(std::string_view string, std::string_view suffix)
 {
 	return string.length() >= suffix.length() and suffix == std::string_view(string.data() + string.length() - suffix.length(), suffix.length());
@@ -195,6 +200,56 @@ struct Parameters
 	bool strict_mode_ = false;
 };
 
+inline int next_char(std::string_view& content) noexcept
+{
+	if (content.empty())
+	{
+		return -1;
+	}
+	
+	auto result = int(-1);
+	
+	if (content.starts_with("\\u00") and content.length() >= 6)
+	{
+		content = content.substr(4);
+		
+		auto shift = std::uint8_t(4);
+		
+		for (int i = 0; i != 2; ++i, shift -= 4)
+		{
+			auto character = std::uint8_t(content[i]);
+			
+			if ('0' <= character and character <= '9')
+			{
+				character -= '0';
+			}
+			else if ('a' <= character and character <= 'f')
+			{
+				character -= 'a';
+				character += 10;
+			}
+			else
+			{
+				result = -1;
+				break;
+			}
+			
+			character <<= shift;
+			result += character;
+		}
+		
+		content = content.substr(2);
+	}
+	
+	if (result == -1)
+	{
+		result = content.front();
+		content = content.substr(1);
+	}
+	
+	return result;
+}
+
 /*!
  * Iterates over @p content starting at @p position to find the first character
  * which is not part of a Java comment nor a whitespace character.
@@ -202,48 +257,106 @@ struct Parameters
  * @return The position of the first non-whitespace non-comment character or the
  * length of the string if none is found.
  */
-inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::ptrdiff_t position) noexcept
+inline std::string_view skip_whitespace(std::string_view content) noexcept
 {
-	while (position != std_ssize(content))
+	for (auto substr = content; substr = content, std::isspace(next_char(substr)); content = substr)
 	{
-		if (std::isspace(static_cast<unsigned char>(content[position])))
+	}
+	
+	return content;
+}
+
+inline std::string_view skip_line_comment(std::string_view content) noexcept
+{
+	if (content.empty())
+	{
+		return content;
+	}
+	
+	auto substr = content;
+	
+	if (next_char(substr) != '/')
+	{
+		return content;
+	}
+	
+	if (next_char(substr) != '/')
+	{
+		return content;
+	}
+	
+	while (not substr.empty())
+	{
+		if (substr.front() == '\n')
 		{
-			++position;
-			continue;
+			substr = substr.substr(1);
+			break;
 		}
 		
-		auto result = position;
+		substr = substr.substr(1);
+	}
+	
+	return substr;
+}
+
+inline std::string_view skip_multiline_comment(std::string_view content) noexcept
+{
+	if (content.empty())
+	{
+		return content;
+	}
+	
+	auto substr = content;
+	
+	if (next_char(substr) != '/' and next_char(substr) != '*')
+	{
+		return content;
+	}
+	
+	unsigned char chars[2] = {0, 0};
+	
+	while (true)
+	{
+		chars[0] = chars[1];
 		
-		if (auto subst = content.substr(position, 2); subst == "//")
+		if (auto c = next_char(substr); c == -1)
 		{
-			position = content.find('\n', position + 2);
-			
-			if (position == std::ptrdiff_t(content.npos))
-			{
-				return std_ssize(content);
-			}
-			
-			++position;
+			break;
 		}
-		else if (subst == "/*")
+		else
 		{
-			position = content.find("*/", position + 2);
-			
-			if (position == std::ptrdiff_t(content.npos))
-			{
-				return std_ssize(content);
-			}
-			
-			position += 2;
+			chars[1] = c;
 		}
 		
-		if (result == position)
+		if (chars[0] == '*' and chars[1] == '/')
 		{
-			return result;
+			return substr;
 		}
 	}
 	
-	return position;
+	return content;
+}
+
+inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::ptrdiff_t position) noexcept
+{
+	auto result = position;
+	
+	while (true)
+	{
+		result = position;
+		result = skip_whitespace(content.substr(result)).data() - content.data();
+		result = skip_line_comment(content.substr(result)).data() - content.data();
+		result = skip_multiline_comment(content.substr(result)).data() - content.data();
+		
+		if (result == position)
+		{
+			break;
+		}
+		
+		position = result;
+	}
+	
+	return result;
 }
 
 inline bool is_identifier_char(char c) noexcept
