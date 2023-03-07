@@ -23,6 +23,48 @@ test_file()
 	diff -u "target/test_resources/${filename}" "target/test_resources/${expected}"
 }
 
+################################################################################
+
+if ! ./target/bin/jurand | grep 'Usage:'; then
+	echo "fail: Usage string not printed"
+	exit 1
+fi
+
+if ! ./target/bin/jurand -h | grep 'Usage:'; then
+	echo "fail: Usage string not printed"
+	exit 1
+fi
+
+if ./target/bin/jurand -i; then
+	echo "fail: should have failed"
+	exit 1
+fi
+
+if ./target/bin/jurand -n; then
+	echo "fail: should have failed"
+	exit 1
+fi
+
+if ./target/bin/jurand -p; then
+	echo "fail: should have failed"
+	exit 1
+fi
+
+if ./target/bin/jurand nonexisting_file -n "A"; then
+	echo "fail: should have failed"
+	exit 1
+fi
+
+if [ -n "$(echo "import A;" | ./target/bin/jurand -n "A")" ]; then
+	echo "fail: output should be empty"
+	exit 1
+fi
+
+if [ "$(echo "import A;" | ./target/bin/jurand -n "B")" != "import A;" ]; then
+	echo "fail: output should be identical to input"
+	exit 1
+fi
+
 test_file "Simple.java" "Simple.1.java" -a -n "D"
 test_file "Simple.java" "Simple.1.java" -a -p "a[.]b[.]c[.]D"
 
