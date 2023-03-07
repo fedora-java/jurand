@@ -27,9 +27,9 @@ inline bool std_contains(const auto& range, const auto& value) noexcept
 	return range.find(value) != range.end();
 }
 
-inline bool std_ends_with(const std::string& string, std::string_view suffix)
+inline bool std_ends_with(std::string_view string, std::string_view suffix)
 {
-	return string.length() >= suffix.length() and suffix == std::string_view(string.c_str() + string.length() - suffix.length(), suffix.length());
+	return string.length() >= suffix.length() and suffix == std::string_view(string.data() + string.length() - suffix.length(), suffix.length());
 }
 
 struct std_osyncstream
@@ -128,17 +128,17 @@ struct Parameters
 };
 
 /*!
- * Iterates over @p string starting at @p position to find the first character
+ * Iterates over @p content starting at @p position to find the first character
  * which is not part of a Java comment nor a whitespace character.
  * 
  * @return The position of the first non-whitespace non-comment character or the
  * length of the string if none is found.
  */
-inline std::ptrdiff_t ignore_whitespace_comments(std::string_view string, std::ptrdiff_t position) noexcept
+inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::ptrdiff_t position) noexcept
 {
-	while (position != std_ssize(string))
+	while (position != std_ssize(content))
 	{
-		if (std::isspace(static_cast<unsigned char>(string[position])))
+		if (std::isspace(static_cast<unsigned char>(content[position])))
 		{
 			++position;
 			continue;
@@ -146,24 +146,24 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view string, std::p
 		
 		auto result = position;
 		
-		if (auto subst = string.substr(position, 2); subst == "//")
+		if (auto subst = content.substr(position, 2); subst == "//")
 		{
-			position = string.find('\n', position + 2);
+			position = content.find('\n', position + 2);
 			
-			if (position == std::ptrdiff_t(string.npos))
+			if (position == std::ptrdiff_t(content.npos))
 			{
-				return std_ssize(string);
+				return std_ssize(content);
 			}
 			
 			++position;
 		}
 		else if (subst == "/*")
 		{
-			position = string.find("*/", position + 2);
+			position = content.find("*/", position + 2);
 			
-			if (position == std::ptrdiff_t(string.npos))
+			if (position == std::ptrdiff_t(content.npos))
 			{
-				return std_ssize(string);
+				return std_ssize(content);
 			}
 			
 			position += 2;
@@ -184,26 +184,26 @@ inline bool is_identifier_char(char c) noexcept
 }
 
 /*!
- * Iterates over @p string starting at @p position to find the next uncommented
+ * Iterates over @p content starting at @p position to find the next uncommented
  * symbol. and returns it and an index pointing past it. The symbol is either a
  * sequence of alphanumeric characters or a single non-aphanumeric character or
  * an empty string if the end has been reached.
  */
-inline std::string_view next_symbol(std::string_view string, std::ptrdiff_t position = 0) noexcept
+inline std::string_view next_symbol(std::string_view content, std::ptrdiff_t position = 0) noexcept
 {
 	auto symbol_length = std::ptrdiff_t(0);
 	
-	if (position < std_ssize(string))
+	if (position < std_ssize(content))
 	{
-		position = ignore_whitespace_comments(string, position);
+		position = ignore_whitespace_comments(content, position);
 		
-		if (position < std_ssize(string))
+		if (position < std_ssize(content))
 		{
 			symbol_length = 1;
 			
-			if (is_identifier_char(string[position]))
+			if (is_identifier_char(content[position]))
 			{
-				while (position + symbol_length != std_ssize(string) and is_identifier_char(string[position + symbol_length]))
+				while (position + symbol_length != std_ssize(content) and is_identifier_char(content[position + symbol_length]))
 				{
 					++symbol_length;
 				}
@@ -211,11 +211,11 @@ inline std::string_view next_symbol(std::string_view string, std::ptrdiff_t posi
 		}
 	}
 	
-	return string.substr(position, symbol_length);
+	return content.substr(position, symbol_length);
 }
 
 /*!
- * Iterates over @p string starting at @p position to find a string @p token
+ * Iterates over @p content starting at @p position to find a string @p token
  * which is present in the source code neither inside a comment nor inside a
  * string nor inside a character literal.
  * 
@@ -223,34 +223,34 @@ inline std::string_view next_symbol(std::string_view string, std::ptrdiff_t posi
  * parentheses and returns the first parethesis outside.
  * 
  * @param alphanumeric If true, considers only tokens that are surrounded by
- * whitespace, comments or are at the boundaries of @p string.
+ * whitespace, comments or are at the boundaries of @p content.
  * 
- * @return The starting index of the token or the length of @p string if not
+ * @return The starting index of the token or the length of @p content if not
  * found.
  */
-inline std::ptrdiff_t find_token(std::string_view string, std::string_view token,
+inline std::ptrdiff_t find_token(std::string_view content, std::string_view token,
 	std::ptrdiff_t position = 0, bool alphanumeric = false, std::ptrdiff_t stack = 0) noexcept
 {
-	while (position + std_ssize(token) <= std_ssize(string))
+	while (position + std_ssize(token) <= std_ssize(content))
 	{
-		position = ignore_whitespace_comments(string, position);
+		position = ignore_whitespace_comments(content, position);
 		
-		if (position == std_ssize(string))
+		if (position == std_ssize(content))
 		{
 			break;
 		}
 		
-		auto substr = string.substr(position, token.length());
+		auto substr = content.substr(position, token.length());
 		
 		if ((token != ")" or stack == 0) and substr == token
-			and not (alphanumeric and ((position > 0 and is_identifier_char(string[position - 1]))
-				or (position + std_ssize(token) < std_ssize(string) and (is_identifier_char(string[position + token.length()]))))))
+			and not (alphanumeric and ((position > 0 and is_identifier_char(content[position - 1]))
+				or (position + std_ssize(token) < std_ssize(content) and (is_identifier_char(content[position + token.length()]))))))
 		{
 			return position;
 		}
-		else if (string[position] == '\'')
+		else if (content[position] == '\'')
 		{
-			if (string.substr(position, 4) == "'\\''")
+			if (content.substr(position, 4) == "'\\''")
 			{
 				position += 3;
 			}
@@ -260,20 +260,20 @@ inline std::ptrdiff_t find_token(std::string_view string, std::string_view token
 				{
 					++position;
 				}
-				while (position < std_ssize(string) and string[position] != '\'');
+				while (position < std_ssize(content) and content[position] != '\'');
 			}
 		}
-		else if (string[position] == '"')
+		else if (content[position] == '"')
 		{
 			++position;
 			
-			while (position < std_ssize(string) and string[position] != '"')
+			while (position < std_ssize(content) and content[position] != '"')
 			{
-				if (string.substr(position, 2) == "\\\\")
+				if (content.substr(position, 2) == "\\\\")
 				{
 					position += 2;
 				}
-				else if (string.substr(position, 2) == "\\\"")
+				else if (content.substr(position, 2) == "\\\"")
 				{
 					position += 2;
 				}
@@ -283,11 +283,11 @@ inline std::ptrdiff_t find_token(std::string_view string, std::string_view token
 				}
 			}
 		}
-		else if (stack != 0 and string[position] == ')')
+		else if (stack != 0 and content[position] == ')')
 		{
 			--stack;
 		}
-		else if (string[position] == '(')
+		else if (content[position] == '(')
 		{
 			++stack;
 		}
@@ -295,30 +295,30 @@ inline std::ptrdiff_t find_token(std::string_view string, std::string_view token
 		++position;
 	}
 	
-	return std_ssize(string);
+	return std_ssize(content);
 }
 
 /*!
- * Iterates over @p string starting at @p position to find the next Java
+ * Iterates over @p content starting at @p position to find the next Java
  * annotation.
  * 
  * @return A pair consisting of the whole extent of the annotation as present in
- * the @p string and the name of the annotation with all whitespace and comments
+ * the @p content and the name of the annotation with all whitespace and comments
  * stripped. If no annotation is found, returns a view pointing past the
  * @p content with length 0 and an empty string.
  */
-inline std::tuple<std::string_view, std::string> next_annotation(std::string_view string, std::ptrdiff_t position = 0)
+inline std::tuple<std::string_view, std::string> next_annotation(std::string_view content, std::ptrdiff_t position = 0)
 {
 	auto result = std::string();
-	auto end_pos = std_ssize(string);
-	position = find_token(string, "@", position);
+	auto end_pos = std_ssize(content);
+	position = find_token(content, "@", position);
 	bool expecting_dot = false;
 	
-	if (position < std_ssize(string))
+	if (position < std_ssize(content))
 	{
 		auto symbol = std::string_view();
-		symbol = next_symbol(string, position + 1);
-		end_pos = symbol.end() - string.begin();
+		symbol = next_symbol(content, position + 1);
+		end_pos = symbol.end() - content.begin();
 		auto new_end_pos = end_pos;
 		
 		while (not symbol.empty())
@@ -327,9 +327,9 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 			{
 				if (symbol == "(")
 				{
-					end_pos = find_token(string, ")", new_end_pos);
+					end_pos = find_token(content, ")", new_end_pos);
 					
-					if (end_pos == std_ssize(string))
+					if (end_pos == std_ssize(content))
 					{
 						result = std::string();
 						position = end_pos;
@@ -345,12 +345,12 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 			result += symbol;
 			expecting_dot = not expecting_dot;
 			end_pos = new_end_pos;
-			symbol = next_symbol(string, new_end_pos);
-			new_end_pos = symbol.end() - string.begin();
+			symbol = next_symbol(content, new_end_pos);
+			new_end_pos = symbol.end() - content.begin();
 		}
 	}
 	
-	return std::tuple(string.substr(position, end_pos - position), std::move(result));
+	return std::tuple(content.substr(position, end_pos - position), std::move(result));
 }
 
 /*!
