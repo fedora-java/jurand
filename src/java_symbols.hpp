@@ -301,7 +301,8 @@ inline std::ptrdiff_t find_token(std::string_view string, std::string_view token
  * 
  * @return A pair consisting of the whole extent of the annotation as present in
  * the @p string and the name of the annotation with all whitespace and comments
- * stripped.
+ * stripped. If no annotation is found, returns a view pointing past
+ * the @p content with length 0 and an empty string.
  */
 inline std::tuple<std::string_view, std::string> next_annotation(std::string_view string, std::ptrdiff_t position = 0)
 {
@@ -409,10 +410,10 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
 inline std::tuple<std::string, Transparent_string_map> remove_imports(
 	std::string_view content, std_span<const std::regex> patterns, const Transparent_string_set& names)
 {
+	auto result = std::tuple<std::string, Transparent_string_map>();
+	auto& [new_content, removed_classes] = result;
+	new_content.reserve(content.size());
 	auto position = std::ptrdiff_t(0);
-	auto result = std::string();
-	result.reserve(content.size());
-	auto removed_classes = Transparent_string_map();
 	
 	while (position < std_ssize(content))
 	{
@@ -442,10 +443,10 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 			{
 				if (symbol.empty())
 				{
-					result.clear();
-					result.append(content);
+					new_content.clear();
+					new_content.append(content);
 					removed_classes.clear();
-					return std::tuple(std::move(result), std::move(removed_classes));
+					return result;
 				}
 				
 				import_name += symbol;
@@ -503,11 +504,11 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 			next_position = end_pos;
 		}
 		
-		result += content.substr(position, copy_end - position);
+		new_content += content.substr(position, copy_end - position);
 		position = next_position;
 	}
 	
-	return std::tuple(std::move(result), std::move(removed_classes));
+	return result;
 }
 
 /*!
@@ -589,7 +590,7 @@ try
 		
 		if (ifs.fail())
 		{
-			throw std::runtime_error("Could not open file for reading");
+			throw std::ios_base::failure("Could not open file for reading");
 		}
 		
 		ifs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
@@ -615,7 +616,7 @@ try
 		
 		if (ofs.fail())
 		{
-			throw std::runtime_error("Could not open file for writing");
+			throw std::ios_base::failure("Could not open file for writing");
 		}
 		
 		ofs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
