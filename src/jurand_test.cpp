@@ -116,9 +116,9 @@ import static java.util.*;
 import static java.lang.String.valueOf;
 import com.google.common.util.concurrent.Service;)";
 		
-		auto args = std::vector<std::regex>();
+		auto args = std::vector<std::unique_ptr<Regex>>();
 		
-		args.emplace_back("Runnable");
+		args.emplace_back(compile_extended_regex("Runnable"));
 
 		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
 import java.util.List;
@@ -127,7 +127,7 @@ import static java.lang.String.valueOf;
 import com.google.common.util.concurrent.Service;)");
 		args.clear();
 		
-		args.emplace_back("[*]");
+		args.emplace_back(compile_extended_regex("[*]"));
 		
 		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
 import java.lang.Runnable;
@@ -136,100 +136,100 @@ import static java.lang.String.valueOf;
 import com.google.common.util.concurrent.Service;)");
 		args.clear();
 		
-		args.emplace_back("java[.]util");
+		args.emplace_back(compile_extended_regex("java[.]util"));
 		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
 import java.lang.Runnable;
 import static java.lang.String.valueOf;
 import com.google.common.util.concurrent.Service;)");
 		args.clear();
 		
-		args.emplace_back("util");
+		args.emplace_back(compile_extended_regex("util"));
 		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
 import java.lang.Runnable;
 import static java.lang.String.valueOf;
 )");
 		args.clear();
 		
-		args.emplace_back("java");
+		args.emplace_back(compile_extended_regex("java"));
 		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
 import com.google.common.util.concurrent.Service;)");
 		args.clear();
 		
-		args.emplace_back("static");
+		args.emplace_back(compile_extended_regex("static"));
 		assert_that(std::get<0>(remove_imports(original_content, args, {})) == original_content);
 		args.clear();
 		
-		args.emplace_back("A");
+		args.emplace_back(compile_extended_regex("A"));
 		assert_that(std::get<0>(remove_imports("import A ;", args, {})) == "");
 		args.clear();
 		
-		args.emplace_back("A");
+		args.emplace_back(compile_extended_regex("A"));
 		assert_that(std::get<0>(remove_imports("import A ; ", args, {})) == " ");
 		args.clear();
 		
-		args.emplace_back("A");
+		args.emplace_back(compile_extended_regex("A"));
 		assert_that(std::get<0>(remove_imports("import/**/A;", args, {})) == "");
 		args.clear();
 		
-		args.emplace_back("A");
+		args.emplace_back(compile_extended_regex("A"));
 		assert_that(std::get<0>(remove_imports("import/**/A/**/;/**/", args, {})) == "/**/");
 		args.clear();
 		
-		args.emplace_back("A");
+		args.emplace_back(compile_extended_regex("A"));
 		assert_that(std::get<0>(remove_imports("import//\nA;", args, {})) == "");
 		args.clear();
 		
-		args.emplace_back("A[.]C");
+		args.emplace_back(compile_extended_regex("A[.]C"));
 		assert_that(std::get<0>(remove_imports("import A./*B;*/C;", args, {})) == "");
 		args.clear();
 		
-		args.emplace_back("A");
+		args.emplace_back(compile_extended_regex("A"));
 		assert_that(std::get<0>(remove_imports("import static A;", args, {})) == "");
 		args.clear();
 		
-		args.emplace_back("A");
+		args.emplace_back(compile_extended_regex("A"));
 		assert_that(std::get<0>(remove_imports("import static a . b /**/ . A;", args, {})) == "");
 		args.clear();
 		
-		args.emplace_back("static");
+		args.emplace_back(compile_extended_regex("static"));
 		assert_that(std::get<0>(remove_imports("import xstatic .A;", args, {})) == "");
 		args.clear();
 		
-		args.emplace_back("static");
+		args.emplace_back(compile_extended_regex("static"));
 		assert_that(std::get<0>(remove_imports("import staticx.A;", args, {})) == "");
 		args.clear();
 		
-		args.emplace_back("A");
+		args.emplace_back(compile_extended_regex("A"));
 		assert_that(std::get<0>(remove_imports("import static/**/A;", args, {})) == "");
 		args.clear();
 		
-		args.emplace_back("A");
+		args.emplace_back(compile_extended_regex("A"));
 		assert_that(std::get<0>(remove_imports("import/**/static/**/A;", args, {})) == "");
 		args.clear();
 		
-		args.emplace_back("A");
+		args.emplace_back(compile_extended_regex("A"));
 		assert_that(std::get<0>(remove_imports("import/* A */B;", args, {})) == "import/* A */B;");
 		args.clear();
 	}
 	
 	{
-		auto patterns = std::vector<std::regex>();
+		auto patterns = std::vector<std::unique_ptr<Regex>>();
 		
-		patterns.emplace_back("Nullable");
+		patterns.emplace_back(compile_extended_regex("Nullable"));
 		assert_that(remove_annotations("new @Nullable Object[initialCapacity];", patterns, {}, {}) == "new Object[initialCapacity];");
 		patterns.clear();
 		
-		patterns.emplace_back("A");
+		patterns.emplace_back(compile_extended_regex("A"));
 		assert_that(remove_annotations("@A(value = /* ) */ \")\")//)", patterns, {}, {}) == "//)");
 		patterns.clear();
 		
-		patterns.emplace_back("A");
+		patterns.emplace_back(compile_extended_regex("A"));
 		assert_that(remove_annotations(R"(
 @A
 class C {})", patterns, {}, {}) == "\nclass C {}");
 		patterns.clear();
 	
-		patterns.emplace_back("A");
+		patterns.emplace_back(compile_extended_regex("A"));
 		assert_that(remove_annotations(R"(
 	@A
 	class C {})", patterns, {}, {}) == "\n	class C {}");
@@ -241,58 +241,58 @@ class C {})", patterns, {}, {}) == "\nclass C {}");
 @org.junit.Test
 @org.junit.jupiter.api.Test)";
 		
-		patterns.emplace_back("SuppressWarnings");
+		patterns.emplace_back(compile_extended_regex("SuppressWarnings"));
 		assert_that(remove_annotations(original_content, patterns, {}, {}) == R"(
 @SuppressFBWarnings(value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 @org.junit.Test
 @org.junit.jupiter.api.Test)");
 		patterns.clear();
 		
-		patterns.emplace_back("Suppress");
+		patterns.emplace_back(compile_extended_regex("Suppress"));
 		assert_that(remove_annotations(original_content, patterns, {}, {}) == R"(
 @org.junit.Test
 @org.junit.jupiter.api.Test)");
 		patterns.clear();
 		
-		patterns.emplace_back("org[.]junit[.]Test");
+		patterns.emplace_back(compile_extended_regex("org[.]junit[.]Test"));
 		assert_that(remove_annotations(original_content, patterns, {}, {}) == R"(
 @SuppressWarnings
 @SuppressFBWarnings(value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 @org.junit.jupiter.api.Test)");
 		patterns.clear();
 		
-		patterns.emplace_back("Test");
+		patterns.emplace_back(compile_extended_regex("Test"));
 		assert_that(remove_annotations(original_content, patterns, {}, {}) == R"(
 @SuppressWarnings
 @SuppressFBWarnings(value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 )");
 		patterns.clear();
 		
-		patterns.emplace_back("@SuppressWarnings");
+		patterns.emplace_back(compile_extended_regex("@SuppressWarnings"));
 		assert_that(remove_annotations(original_content, patterns, {}, {}) == original_content);
 		patterns.clear();
 		
-		patterns.emplace_back("EI_EXPOSE_REP");
+		patterns.emplace_back(compile_extended_regex("EI_EXPOSE_REP"));
 		assert_that(remove_annotations(original_content, patterns, {}, {}) == original_content);
 		patterns.clear();
 		
-		patterns.emplace_back("A");
+		patterns.emplace_back(compile_extended_regex("A"));
 		assert_that(remove_annotations("@a/*A*/.B", patterns, {}, {}) == "@a/*A*/.B");
 		patterns.clear();
 		
-		patterns.emplace_back("B");
+		patterns.emplace_back(compile_extended_regex("B"));
 		assert_that(remove_annotations("@a/*A*/.B", patterns, {}, {}) == "");
 		patterns.clear();
 		
-		patterns.emplace_back("A");
+		patterns.emplace_back(compile_extended_regex("A"));
 		assert_that(remove_annotations("@ A", patterns, {}, {}) == "");
 		patterns.clear();
 		
-		patterns.emplace_back("A");
+		patterns.emplace_back(compile_extended_regex("A"));
 		assert_that(remove_annotations("@//\nA", patterns, {}, {}) == "");
 		patterns.clear();
 		
-		patterns.emplace_back("B");
+		patterns.emplace_back(compile_extended_regex("B"));
 		assert_that(remove_annotations("@A/*(B)*/", patterns, {}, {}) == "@A/*(B)*/");
 		patterns.clear();
 	}

@@ -5,7 +5,6 @@
 
 #include <filesystem>
 #include <fstream>
-#include <regex>
 #include <vector>
 #include <set>
 #include <map>
@@ -16,6 +15,8 @@
 #include <type_traits>
 
 #include <iostream>
+
+#include <regex.hpp>
 
 inline std::ptrdiff_t std_ssize(const auto& range) noexcept
 {
@@ -121,7 +122,7 @@ using Parameter_dict = std::map<std::string, std::vector<std::string>, Transpare
 
 struct Parameters
 {
-	std::vector<std::regex> patterns_;
+	std::vector<std::unique_ptr<Regex>> patterns_;
 	Transparent_string_set names_;
 	bool also_remove_annotations_ = false;
 	bool in_place_ = false;
@@ -366,7 +367,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
  * 
  * @return The simple class name.
  */
-inline bool name_matches(std::string_view name, std_span<const std::regex> patterns,
+inline bool name_matches(std::string_view name, std_span<const std::unique_ptr<Regex>> patterns,
 	const Transparent_string_set& names, const Transparent_string_map& imported_names) noexcept
 {
 	auto simple_name = name;
@@ -391,7 +392,7 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
 	
 	for (const auto& pattern : patterns)
 	{
-		if (std::regex_search(name.begin(), name.end(), pattern))
+		if (pattern->search(name))
 		{
 			return true;
 		}
@@ -411,7 +412,7 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
  * import statement.
  */
 inline std::tuple<std::string, Transparent_string_map> remove_imports(
-	std::string_view content, std_span<const std::regex> patterns, const Transparent_string_set& names)
+	std::string_view content, std_span<const std::unique_ptr<Regex>> patterns, const Transparent_string_set& names)
 {
 	auto result = std::tuple<std::string, Transparent_string_map>();
 	auto& [new_content, removed_classes] = result;
@@ -521,7 +522,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
  * 
  * @return The resulting string with annotations removed.
  */
-inline std::string remove_annotations(std::string_view content, std_span<const std::regex> patterns,
+inline std::string remove_annotations(std::string_view content, std_span<const std::unique_ptr<Regex>> patterns,
 	const Transparent_string_set& names, const Transparent_string_map& imported_names)
 {
 	auto position = std::ptrdiff_t(0);
@@ -684,7 +685,7 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 		
 		for (const auto& pattern : it->second)
 		{
-			result.patterns_.emplace_back(pattern);
+			result.patterns_.emplace_back(compile_extended_regex(pattern));
 		}
 	}
 	
