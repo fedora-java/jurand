@@ -103,6 +103,8 @@ test_file "Utf_8.java" "Utf_8.1.java" -n "č"
 test_file "Utf_8.java" "Utf_8.2.java" -a -n "č"
 test_file "Utf_8.java" "Utf_8.3.java" -a -n "ď"
 
+test_file "Regression5.java" "Regression5.1.java" -a -n Serial
+
 # The purpose of these tests is to check that the tool does not loop, the
 # result is irrelevant
 run_tool "Termination.1.java" -n "C" || :
