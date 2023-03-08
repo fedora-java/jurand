@@ -536,12 +536,12 @@ inline std::string remove_annotations(std::string_view content, std_span<const s
 		auto next_position = std_ssize(content);
 		auto copy_end = std_ssize(content);
 		
-		if (annotation.begin() != content.end() and annotation_name != "interface")
+		if (annotation.begin() != content.end())
 		{
 			copy_end = annotation.end() - content.begin();
 			next_position = copy_end;
 			
-			if (name_matches(annotation_name, patterns, names, imported_names))
+			if (annotation_name != "interface" and name_matches(annotation_name, patterns, names, imported_names))
 			{
 				copy_end = annotation.begin() - content.begin();
 				
