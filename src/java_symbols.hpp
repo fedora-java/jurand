@@ -32,19 +32,21 @@ inline bool std_ends_with(std::string_view string, std::string_view suffix)
 	return string.length() >= suffix.length() and suffix == std::string_view(string.data() + string.length() - suffix.length(), suffix.length());
 }
 
-struct std_osyncstream
+struct std_osyncstream : protected std::lock_guard<std::mutex>
 {
+	static inline auto cout_mtx = std::mutex();
+	static inline auto clog_mtx = std::mutex();
+	
 	~std_osyncstream()
 	{
 		stream_.flush();
-		mtx_.unlock();
 	}
 	
-	std_osyncstream(std::ostream& stream) noexcept
+	std_osyncstream(std::ostream& stream, std::mutex& mtx) noexcept
 		:
+		lock_guard(mtx),
 		stream_(stream)
 	{
-		mtx_.lock();
 	}
 	
 	std_osyncstream& operator<<(const auto& value)
@@ -60,7 +62,6 @@ struct std_osyncstream
 	}
 	
 	std::ostream& stream_;
-	std::mutex mtx_;
 };
 
 template<typename Type>
@@ -605,7 +606,7 @@ try
 	
 	if (not parameters.in_place_)
 	{
-		auto osyncstream = std_osyncstream(std::cout);
+		auto osyncstream = std_osyncstream(std::cout, std_osyncstream::cout_mtx);
 		
 		if (not path.empty())
 		{
@@ -625,7 +626,7 @@ try
 		
 		ofs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
 		ofs.write(content.c_str(), content.size());
-		std_osyncstream(std::clog) << "Removing symbols from file " << path.native() << "\n";
+		std_osyncstream(std::clog, std_osyncstream::clog_mtx) << "Removing symbols from file " << path.native() << "\n";
 	}
 	
 	return content;
