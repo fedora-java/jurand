@@ -36,6 +36,7 @@ struct std_osyncstream
 {
 	~std_osyncstream()
 	{
+		stream_.flush();
 		mtx_.unlock();
 	}
 	
