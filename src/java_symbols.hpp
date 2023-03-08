@@ -684,7 +684,7 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 		
 		for (const auto& pattern : it->second)
 		{
-			result.patterns_.emplace_back(pattern);
+			result.patterns_.emplace_back(pattern, std::regex_constants::extended);
 		}
 	}
 	

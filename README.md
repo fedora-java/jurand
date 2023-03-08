@@ -28,8 +28,8 @@ irrelevant.
 
 Class name matching can be done two ways: **`-n`** to match simple class names
 or **`-p`** to match the fully qualified name (if at all present in that form in
-the sources) against the provided regex pattern. These options can be specified
-multiple times.
+the sources) against the provided (extended POSIX) regex pattern. These options
+can be specified multiple times.
 
 The tool writes the results to standard output unless **`-i`** option is
 specified in which case it will replace the original files' content.
