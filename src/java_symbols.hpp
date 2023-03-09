@@ -34,8 +34,8 @@ inline bool std_ends_with(std::string_view string, std::string_view suffix)
 
 struct std_osyncstream : protected std::lock_guard<std::mutex>
 {
-	static inline auto cout_mtx = std::mutex();
-	static inline auto clog_mtx = std::mutex();
+	inline static auto cout_mtx = std::mutex();
+	inline static auto clog_mtx = std::mutex();
 	
 	~std_osyncstream()
 	{
