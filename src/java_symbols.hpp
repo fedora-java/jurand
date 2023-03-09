@@ -9,6 +9,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <memory>
 #include <string_view>
 #include <tuple>
 #include <mutex>
@@ -16,6 +17,8 @@
 #include <type_traits>
 
 #include <iostream>
+
+#include <io_thread.hpp>
 
 inline std::ptrdiff_t std_ssize(const auto& range) noexcept
 {
@@ -31,38 +34,6 @@ inline bool std_ends_with(std::string_view string, std::string_view suffix)
 {
 	return string.length() >= suffix.length() and suffix == std::string_view(string.data() + string.length() - suffix.length(), suffix.length());
 }
-
-struct std_osyncstream : protected std::lock_guard<std::mutex>
-{
-	static inline auto cout_mtx = std::mutex();
-	static inline auto clog_mtx = std::mutex();
-	
-	~std_osyncstream()
-	{
-		stream_.flush();
-	}
-	
-	std_osyncstream(std::ostream& stream, std::mutex& mtx) noexcept
-		:
-		lock_guard(mtx),
-		stream_(stream)
-	{
-	}
-	
-	std_osyncstream& operator<<(const auto& value)
-	{
-		stream_ << value;
-		return *this;
-	}
-	
-	std_osyncstream& write(const char* content, std::streamsize length)
-	{
-		stream_.write(content, length);
-		return *this;
-	}
-	
-	std::ostream& stream_;
-};
 
 template<typename Type>
 struct std_span
@@ -311,7 +282,7 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
  */
 inline std::tuple<std::string_view, std::string> next_annotation(std::string_view content, std::ptrdiff_t position = 0)
 {
-	auto result = std::string();
+	auto annotation_name = std::string();
 	auto end_pos = std_ssize(content);
 	position = find_token(content, "@", position);
 	bool expecting_dot = false;
@@ -333,7 +304,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 					
 					if (end_pos == std_ssize(content))
 					{
-						result = std::string();
+						annotation_name = std::string();
 						position = end_pos;
 						break;
 					}
@@ -344,7 +315,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 				break;
 			}
 			
-			result += symbol;
+			annotation_name += symbol;
 			expecting_dot = not expecting_dot;
 			end_pos = new_end_pos;
 			symbol = next_symbol(content, new_end_pos);
@@ -352,7 +323,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 		}
 	}
 	
-	return std::tuple(content.substr(position, end_pos - position), std::move(result));
+	return std::tuple(content.substr(position, end_pos - position), std::move(annotation_name));
 }
 
 /*!
@@ -606,27 +577,32 @@ try
 	
 	if (not parameters.in_place_)
 	{
-		auto osyncstream = std_osyncstream(std::cout, std_osyncstream::cout_mtx);
-		
-		if (not path.empty())
+		Task::emplace([content, path = std::move(path)]() -> void
 		{
-			osyncstream << path.native() << ":\n";
-		}
-		
-		osyncstream.write(content.c_str(), content.size());
+			if (not path.empty())
+			{
+				std::cout << path.native() << ":\n";
+			}
+			
+			std::cout << content;
+		});
 	}
 	else if (content.size() < original_content.size())
 	{
-		auto ofs = std::ofstream(path);
-		
-		if (ofs.fail())
+		Task::emplace([
+			ofs = std::ofstream(path, std::ios_base::out),
+			content = std::move(content),
+			message = std::string("Removing symbols from file ") + path.native() + "\n"]() mutable -> void
 		{
-			throw std::ios_base::failure("Could not open file for writing");
-		}
-		
-		ofs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
-		ofs.write(content.c_str(), content.size());
-		std_osyncstream(std::clog, std_osyncstream::clog_mtx) << "Removing symbols from file " << path.native() << "\n";
+			if (ofs.fail())
+			{
+				throw std::ios_base::failure("Could not open file for writing");
+			}
+			
+			ofs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
+			ofs << content;
+			std::cout << message;
+		});
 	}
 	
 	return content;
