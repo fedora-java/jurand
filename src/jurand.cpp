@@ -1,10 +1,23 @@
 #include <array>
 #include <mutex>
 #include <thread>
+#include <future>
+#include <utility>
+#include <functional>
+#include <atomic>
 
 #include <java_symbols.hpp>
 
 using namespace java_symbols;
+
+// TODO replace with C++20 `std::bind_front`
+auto bind_handle_file(std::filesystem::path&& path)
+{
+	return [path = std::move(path)](const Parameters& parameters) -> void
+	{
+		handle_file(std::move(path), parameters);
+	};
+}
 
 int main(int argc, const char** argv)
 {
@@ -56,8 +69,9 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		return 0;
 	}
 	
-	auto files = std::vector<std::filesystem::path>();
-	files.reserve(32);
+	auto tasks_end = std::atomic<std::size_t>(0);
+	auto tasks = std::vector<std::packaged_task<void(const Parameters&)>>();
+	tasks.reserve(32);
 	
 	for (std::string& fileroot : fileroots)
 	{
@@ -71,7 +85,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		
 		if (std::filesystem::is_regular_file(to_handle) and not std::filesystem::is_symlink(to_handle))
 		{
-			files.emplace_back(std::move(to_handle));
+			tasks.emplace_back(bind_handle_file(std::move(to_handle)));
 		}
 		else if (std::filesystem::is_directory(to_handle))
 		{
@@ -83,50 +97,36 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 					and not std::filesystem::is_symlink(to_handle)
 					and std_ends_with(to_handle.native(), ".java"))
 				{
-					files.emplace_back(std::move(to_handle));
+					tasks.emplace_back(bind_handle_file(std::move(to_handle)));
 				}
 			}
 		}
 	}
 	
-	if (files.empty())
+	if (tasks.empty())
 	{
 		std::cout << "jurand: no valid input files" << "\n";
 		return 1;
 	}
 	
-	auto errors_mtx = std::mutex();
-	auto errors = std::vector<std::string>();
+	auto threads = std::vector<std::thread>(std::min(std::size(tasks), std::max<std::size_t>(1, std::thread::hardware_concurrency())));
 	
-	// auto threads = std::vector<std::jthread>(std::max(1u, std::thread::hardware_concurrency()));
-	auto threads = std::vector<std::thread>(std::min(std::size(files), std::max<std::size_t>(1, std::thread::hardware_concurrency())));
-	
+	for (auto& thread : threads)
 	{
-		auto begin = std::size_t(0);
-		
-		for (std::size_t i = 0; i != std::size(threads); ++i)
+		thread = std::thread([&]() noexcept -> void
 		{
-			auto remainder = std::size(files) % std::size(threads);
-			auto length = std::size(files) / std::size(threads) + bool(i < remainder);
-			
-			threads[i] = std::thread([&, begin, length]() noexcept -> void
+			while (true)
 			{
-				for (auto j = begin; j != begin + length; ++j)
+				if (auto index = tasks_end.fetch_add(1, std::memory_order_acq_rel); index < tasks.size())
 				{
-					try
-					{
-						handle_file(std::move(files[j]), parameters);
-					}
-					catch (std::exception& ex)
-					{
-						auto lg = std::lock_guard(errors_mtx);
-						errors.emplace_back(ex.what());
-					}
+					tasks[index](parameters);
 				}
-			});
-			
-			begin += length;
-		}
+				else
+				{
+					break;
+				}
+			}
+		});
 	}
 	
 	for (auto& thread : threads)
@@ -136,15 +136,20 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	
 	threads.clear();
 	
-	if (not errors.empty())
+	int exit_code = 0;
+	
+	for (auto& task : tasks)
 	{
-		std::cout << "jurand: exceptions occured during the process:" << "\n";
-		
-		for (const auto& error : errors)
+		try
 		{
-			std::cout << "- " << error << "\n";
+			task.get_future().get();
 		}
-		
-		return 2;
+		catch (std::exception& ex)
+		{
+			std::cout << "jurand: an exception occured during the process: " << ex.what() << "\n";
+			exit_code = 2;
+		}
 	}
+	
+	return exit_code;
 }
