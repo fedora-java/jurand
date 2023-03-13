@@ -100,6 +100,7 @@ struct std_span
 	const Type* end() const noexcept {return end_;}
 	
 	bool empty() const noexcept {return begin_ == end_;}
+	std::size_t size() const noexcept {return end_ - begin_;}
 	
 	Type* begin_ = nullptr;
 	Type* end_ = nullptr;
@@ -110,6 +111,18 @@ struct std_span
  */
 namespace java_symbols
 {
+struct Strict_mode
+{
+	virtual ~Strict_mode() = default;
+	virtual void any_annotation_removed() {}
+	virtual void pattern_matched(std::string_view) {}
+	virtual void name_matched(std::string_view) {}
+	virtual void file_truncated(const std::filesystem::path&) {}
+}
+inline static default_strict_mode;
+
+inline static Strict_mode* strict_mode = &default_strict_mode;
+
 //! Allows comparison between string and string_view
 struct Transparent_string_cmp : std::less<std::string_view>
 {
@@ -121,12 +134,46 @@ using Transparent_string_map = std::map<std::string, std::string, Transparent_st
 
 using Parameter_dict = std::map<std::string, std::vector<std::string>, Transparent_string_cmp>;
 
+struct Named_regex : std::regex
+{
+	Named_regex() = default;
+	
+	Named_regex(const char* pattern, auto&&... args)
+		:
+		Named_regex(std::string_view(pattern), std::forward<decltype(args)>(args)...)
+	{
+	}
+	
+	Named_regex(std::string_view pattern, auto&&... args)
+		:
+		std::regex(pattern.data(), pattern.length(), std::forward<decltype(args)>(args)...),
+		name_(pattern)
+	{
+	}
+	
+	Named_regex(std::string&& pattern, auto&&... args)
+		:
+		std::regex(pattern, std::forward<decltype(args)>(args)...),
+		name_(std::move(pattern))
+	{
+	}
+	
+	operator std::string_view() const noexcept
+	{
+		return name_;
+	}
+	
+private:
+	std::string name_;
+};
+
 struct Parameters
 {
-	std::vector<std::regex> patterns_;
+	std::vector<Named_regex> patterns_;
 	Transparent_string_set names_;
 	bool also_remove_annotations_ = false;
 	bool in_place_ = false;
+	bool strict_mode_ = false;
 };
 
 /*!
@@ -368,7 +415,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
  * 
  * @return The simple class name.
  */
-inline bool name_matches(std::string_view name, std_span<const std::regex> patterns,
+inline bool name_matches(std::string_view name, std_span<const Named_regex> patterns,
 	const Transparent_string_set& names, const Transparent_string_map& imported_names) noexcept
 {
 	auto simple_name = name;
@@ -380,6 +427,7 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
 	
 	if (std_contains(names, simple_name))
 	{
+		strict_mode->name_matched(simple_name);
 		return true;
 	}
 	
@@ -395,6 +443,7 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
 	{
 		if (std::regex_search(name.begin(), name.end(), pattern))
 		{
+			strict_mode->pattern_matched(pattern);
 			return true;
 		}
 	}
@@ -413,7 +462,7 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
  * import statement.
  */
 inline std::tuple<std::string, Transparent_string_map> remove_imports(
-	std::string_view content, std_span<const std::regex> patterns, const Transparent_string_set& names)
+	std::string_view content, std_span<const Named_regex> patterns, const Transparent_string_set& names)
 {
 	auto result = std::tuple<std::string, Transparent_string_map>();
 	auto& [new_content, removed_classes] = result;
@@ -523,7 +572,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
  * 
  * @return The resulting string with annotations removed.
  */
-inline std::string remove_annotations(std::string_view content, std_span<const std::regex> patterns,
+inline std::string remove_annotations(std::string_view content, std_span<const Named_regex> patterns,
 	const Transparent_string_set& names, const Transparent_string_map& imported_names)
 {
 	auto position = std::ptrdiff_t(0);
@@ -574,13 +623,19 @@ inline std::string handle_content(std::string_view content, const Parameters& pa
 	
 	if (parameters.also_remove_annotations_)
 	{
+		content = new_content;
 		new_content = remove_annotations(new_content, parameters.patterns_, parameters.names_, removed_classes);
+		
+		if (new_content.size() < content.size())
+		{
+			strict_mode->any_annotation_removed();
+		}
 	}
 	
 	return new_content;
 }
 
-inline std::string handle_file(std::filesystem::path path, const Parameters& parameters)
+inline std::string handle_file(const std::filesystem::path& path, const Parameters& parameters)
 try
 {
 	auto original_content = std::string();
@@ -603,6 +658,11 @@ try
 	}
 	
 	auto content = handle_content(original_content, parameters);
+	
+	if (not path.empty() and content.size() < original_content.size())
+	{
+		strict_mode->file_truncated(path);
+	}
 	
 	if (not parameters.in_place_)
 	{
@@ -706,6 +766,11 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 	if (std_contains(parameters, "-i") or std_contains(parameters, "--in-place"))
 	{
 		result.in_place_ = true;
+	}
+	
+	if (std_contains(parameters, "--strict"))
+	{
+		result.strict_mode_ = true;
 	}
 	
 	return result;

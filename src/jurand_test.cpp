@@ -116,7 +116,7 @@ import static java.util.*;
 import static java.lang.String.valueOf;
 import com.google.common.util.concurrent.Service;)";
 		
-		auto args = std::vector<std::regex>();
+		auto args = std::vector<Named_regex>();
 		
 		args.emplace_back("Runnable");
 
@@ -213,7 +213,7 @@ import com.google.common.util.concurrent.Service;)");
 	}
 	
 	{
-		auto patterns = std::vector<std::regex>();
+		auto patterns = std::vector<Named_regex>();
 		
 		patterns.emplace_back("Nullable");
 		assert_that(remove_annotations("new @Nullable Object[initialCapacity];", patterns, {}, {}) == "new Object[initialCapacity];");
