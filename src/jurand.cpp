@@ -72,6 +72,9 @@ Usage: jurand [optional flags] <matcher>... [file path]...
         -a      also remove annotations used in code
         -i, --in-place
                 replace the contents of files
+        --strict
+                (wih -i only) fail if any of the specified options was redundant
+                and no changes associated with the option were made
 
         -h, --help
                 print help message
