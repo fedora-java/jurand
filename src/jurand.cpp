@@ -10,15 +10,6 @@
 
 using namespace java_symbols;
 
-// TODO replace with C++20 `std::bind_front`
-auto bind_handle_file(std::string_view origin, std::filesystem::path&& path)
-{
-	return [path = Path_origin_entry(std::move(path), origin)](const Parameters& parameters) -> void
-	{
-		handle_file(path, parameters);
-	};
-}
-
 struct Strict_mode_enabled final : Strict_mode
 {
 	std::atomic<bool> any_annotation_removed_ = false;
@@ -126,7 +117,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		
 		if (std::filesystem::is_regular_file(to_handle) and not std::filesystem::is_symlink(to_handle))
 		{
-			tasks.emplace_back(bind_handle_file(fileroot, std::move(to_handle)));
+			tasks.emplace_back(std::bind(&handle_file, Path_origin_entry(std::move(to_handle), fileroot), std::placeholders::_1));
 		}
 		else if (std::filesystem::is_directory(to_handle))
 		{
@@ -138,7 +129,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 					and not std::filesystem::is_symlink(to_handle)
 					and std_ends_with(to_handle.native(), ".java"))
 				{
-					tasks.emplace_back(bind_handle_file(fileroot, std::move(to_handle)));
+					tasks.emplace_back(std::bind(&handle_file, Path_origin_entry(std::move(to_handle), fileroot), std::placeholders::_1));
 				}
 			}
 		}
