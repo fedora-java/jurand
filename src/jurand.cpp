@@ -11,9 +11,9 @@
 using namespace java_symbols;
 
 // TODO replace with C++20 `std::bind_front`
-auto bind_handle_file(std::filesystem::path&& path)
+auto bind_handle_file(std::string_view origin, std::filesystem::path&& path)
 {
-	return [path = std::move(path)](const Parameters& parameters) -> void
+	return [path = Path_origin_entry(std::move(path), origin)](const Parameters& parameters) -> void
 	{
 		handle_file(path, parameters);
 	};
@@ -25,7 +25,7 @@ struct Strict_mode_enabled final : Strict_mode
 	std::mutex mutex_;
 	std::map<std::string_view, bool, Transparent_string_cmp> patterns_matched_;
 	std::map<std::string_view, bool, Transparent_string_cmp> names_matched_;
-	std::map<std::filesystem::path, std::pair<std::filesystem::path, bool>> files_truncated_;
+	std::map<std::string_view, bool> files_truncated_;
 	
 	void any_annotation_removed() override
 	{
@@ -35,19 +35,19 @@ struct Strict_mode_enabled final : Strict_mode
 	void pattern_matched(std::string_view pattern) override
 	{
 		auto lg = std::lock_guard(mutex_);
-		patterns_matched_.find(pattern)->second = true;
+		patterns_matched_.at(pattern) = true;
 	}
 	
 	void name_matched(std::string_view simple_name) override
 	{
 		auto lg = std::lock_guard(mutex_);
-		names_matched_.find(simple_name)->second = true;
+		names_matched_.at(simple_name) = true;
 	}
 	
-	void file_truncated(const std::filesystem::path& path) override
+	void file_truncated(std::string_view path) override
 	{
 		auto lg = std::lock_guard(mutex_);
-		files_truncated_.at(path).second = true;
+		files_truncated_.at(path) = true;
 	}
 }
 static strict_mode_enabled;
@@ -126,12 +126,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		
 		if (std::filesystem::is_regular_file(to_handle) and not std::filesystem::is_symlink(to_handle))
 		{
-			if (parameters.strict_mode_)
-			{
-				strict_mode_enabled.files_truncated_.try_emplace(to_handle, std::pair(to_handle, false));
-			}
-			
-			tasks.emplace_back(bind_handle_file(std::move(to_handle)));
+			tasks.emplace_back(bind_handle_file(fileroot, std::move(to_handle)));
 		}
 		else if (std::filesystem::is_directory(to_handle))
 		{
@@ -143,12 +138,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 					and not std::filesystem::is_symlink(to_handle)
 					and std_ends_with(to_handle.native(), ".java"))
 				{
-					if (parameters.strict_mode_)
-					{
-						strict_mode_enabled.files_truncated_.try_emplace(to_handle, std::pair(fileroot, false));
-					}
-					
-					tasks.emplace_back(bind_handle_file(std::move(to_handle)));
+					tasks.emplace_back(bind_handle_file(fileroot, std::move(to_handle)));
 				}
 			}
 		}
@@ -162,6 +152,11 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	
 	if (parameters.strict_mode_)
 	{
+		for (const auto& fileroot : fileroots)
+		{
+			strict_mode_enabled.files_truncated_.try_emplace(fileroot);
+		}
+		
 		for (const auto& pattern : parameters.patterns_)
 		{
 			strict_mode_enabled.patterns_matched_.try_emplace(pattern);
@@ -241,20 +236,13 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 			}
 		}
 		
-		auto non_truncated_fileroots = std::set<std::string>();
-		
 		for (const auto& file_entry : strict_mode_enabled.files_truncated_)
 		{
-			if (not file_entry.second.second)
+			if (not file_entry.second)
 			{
-				non_truncated_fileroots.insert(file_entry.second.first.native());
+				std::cout << "jurand: strict mode: no changes were made in " << file_entry.first << "\n";
+				exit_code = 3;
 			}
-		}
-		
-		for (std::string_view file : non_truncated_fileroots)
-		{
-			std::cout << "jurand: strict mode: no changes were made in " << file << "\n";
-			exit_code = 3;
 		}
 	}
 	

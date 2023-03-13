@@ -117,7 +117,7 @@ struct Strict_mode
 	virtual void any_annotation_removed() = 0;
 	virtual void pattern_matched(std::string_view) = 0;
 	virtual void name_matched(std::string_view) = 0;
-	virtual void file_truncated(const std::filesystem::path&) = 0;
+	virtual void file_truncated(std::string_view) = 0;
 };
 
 inline static Strict_mode* strict_mode = nullptr;
@@ -164,6 +164,26 @@ struct Named_regex : std::regex
 	
 private:
 	std::string name_;
+};
+
+struct Path_origin_entry : std::filesystem::path
+{
+	Path_origin_entry() = default;
+	
+	Path_origin_entry(auto&& path, std::string_view origin)
+		:
+		std::filesystem::path(std::forward<decltype(path)>(path)),
+		origin_(origin)
+	{
+	}
+	
+	std::string_view origin() const noexcept
+	{
+		return origin_;
+	}
+	
+private:
+	std::string_view origin_;
 };
 
 struct Parameters
@@ -642,7 +662,7 @@ inline std::string handle_content(std::string_view content, const Parameters& pa
 	return new_content;
 }
 
-inline std::string handle_file(const std::filesystem::path& path, const Parameters& parameters)
+inline std::string handle_file(const Path_origin_entry& path, const Parameters& parameters)
 try
 {
 	auto original_content = std::string();
@@ -681,7 +701,7 @@ try
 	{
 		if (strict_mode)
 		{
-			strict_mode->file_truncated(path);
+			strict_mode->file_truncated(path.origin());
 		}
 		
 		auto ofs = std::ofstream(path);
