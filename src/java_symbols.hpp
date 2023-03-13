@@ -114,14 +114,13 @@ namespace java_symbols
 struct Strict_mode
 {
 	virtual ~Strict_mode() = default;
-	virtual void any_annotation_removed() {}
-	virtual void pattern_matched(std::string_view) {}
-	virtual void name_matched(std::string_view) {}
-	virtual void file_truncated(const std::filesystem::path&) {}
-}
-inline static default_strict_mode;
+	virtual void any_annotation_removed() = 0;
+	virtual void pattern_matched(std::string_view) = 0;
+	virtual void name_matched(std::string_view) = 0;
+	virtual void file_truncated(const std::filesystem::path&) = 0;
+};
 
-inline static Strict_mode* strict_mode = &default_strict_mode;
+inline static Strict_mode* strict_mode = nullptr;
 
 //! Allows comparison between string and string_view
 struct Transparent_string_cmp : std::less<std::string_view>
@@ -427,7 +426,11 @@ inline bool name_matches(std::string_view name, std_span<const Named_regex> patt
 	
 	if (std_contains(names, simple_name))
 	{
-		strict_mode->name_matched(simple_name);
+		if (strict_mode)
+		{
+			strict_mode->name_matched(simple_name);
+		}
+		
 		return true;
 	}
 	
@@ -443,7 +446,11 @@ inline bool name_matches(std::string_view name, std_span<const Named_regex> patt
 	{
 		if (std::regex_search(name.begin(), name.end(), pattern))
 		{
-			strict_mode->pattern_matched(pattern);
+			if (strict_mode)
+			{
+				strict_mode->pattern_matched(pattern);
+			}
+			
 			return true;
 		}
 	}
@@ -626,7 +633,7 @@ inline std::string handle_content(std::string_view content, const Parameters& pa
 		content = new_content;
 		new_content = remove_annotations(new_content, parameters.patterns_, parameters.names_, removed_classes);
 		
-		if (new_content.size() < content.size())
+		if (strict_mode and new_content.size() < content.size())
 		{
 			strict_mode->any_annotation_removed();
 		}
@@ -672,7 +679,10 @@ try
 	}
 	else if (content.size() < original_content.size())
 	{
-		strict_mode->file_truncated(path);
+		if (strict_mode)
+		{
+			strict_mode->file_truncated(path);
+		}
 		
 		auto ofs = std::ofstream(path);
 		
