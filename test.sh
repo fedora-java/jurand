@@ -24,6 +24,14 @@ test_file()
 	diff -u "target/test_resources/${filename}" "target/test_resources/${expected}"
 }
 
+test_strict()
+{
+	local filename="${1}"; shift
+	local expected="${1}"; shift
+	cp "test_resources/${expected}" "target/test_resources/${expected}"
+	run_tool "${filename}" --strict "${@}" | grep "strict mode" 1>/dev/null
+}
+
 ################################################################################
 # Tests for simple invocations and return codes
 
@@ -129,5 +137,19 @@ for filename in A a/B a/b/C; do
 done
 
 ################################################################################
+# Tests of strict mode
 
-echo PASSED
+# Nothing was matched/removed
+test_strict "Strict.1.java" "Strict.1.java" -p "z"
+test_strict "Strict.1.java" "Strict.1.java" -n "z"
+test_strict "Strict.2.java" "Strict.2.java" -p "z"
+test_strict "Strict.2.java" "Strict.2.java" -n "z"
+# -a but no annotation was removed
+test_strict "Strict.2.java" "Strict.2.java" -a -p "a"
+test_strict "Strict.2.java" "Strict.2.java" -a -n "C"
+# Should print the directory name
+run_tool "directory" -a --strict -n "XXX" | grep "strict mode:.*/directory" 1>/dev/null
+
+################################################################################
+
+echo Tests PASSED
