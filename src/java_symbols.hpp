@@ -128,10 +128,10 @@ struct Transparent_string_cmp : std::less<std::string_view>
 	using is_transparent = void;
 };
 
-using Transparent_string_set = std::set<std::string, Transparent_string_cmp>;
+using Transparent_string_view_set = std::set<std::string_view, Transparent_string_cmp>;
 using Transparent_string_map = std::map<std::string, std::string, Transparent_string_cmp>;
 
-using Parameter_dict = std::map<std::string, std::vector<std::string>, Transparent_string_cmp>;
+using Parameter_dict = std::map<std::string_view, std::vector<std::string_view>, Transparent_string_cmp>;
 
 struct Named_regex : std::regex
 {
@@ -189,7 +189,7 @@ private:
 struct Parameters
 {
 	std::vector<Named_regex> patterns_;
-	Transparent_string_set names_;
+	Transparent_string_view_set names_;
 	bool also_remove_annotations_ = false;
 	bool in_place_ = false;
 	bool strict_mode_ = false;
@@ -435,7 +435,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
  * @return The simple class name.
  */
 inline bool name_matches(std::string_view name, std_span<const Named_regex> patterns,
-	const Transparent_string_set& names, const Transparent_string_map& imported_names) noexcept
+	const Transparent_string_view_set& names, const Transparent_string_map& imported_names) noexcept
 {
 	auto simple_name = name;
 	
@@ -489,7 +489,7 @@ inline bool name_matches(std::string_view name, std_span<const Named_regex> patt
  * import statement.
  */
 inline std::tuple<std::string, Transparent_string_map> remove_imports(
-	std::string_view content, std_span<const Named_regex> patterns, const Transparent_string_set& names)
+	std::string_view content, std_span<const Named_regex> patterns, const Transparent_string_view_set& names)
 {
 	auto result = std::tuple<std::string, Transparent_string_map>();
 	auto& [new_content, removed_classes] = result;
@@ -507,7 +507,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 			auto symbol = next_symbol(content, next_position + 6);
 			auto end_pos = symbol.end() - content.begin();
 			
-			const auto empty_set = Transparent_string_set();
+			const auto empty_set = Transparent_string_view_set();
 			const auto* names_passed = &names;
 			
 			bool is_static = false;
@@ -600,7 +600,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
  * @return The resulting string with annotations removed.
  */
 inline std::string remove_annotations(std::string_view content, std_span<const Named_regex> patterns,
-	const Transparent_string_set& names, const Transparent_string_map& imported_names)
+	const Transparent_string_view_set& names, const Transparent_string_map& imported_names)
 {
 	auto position = std::ptrdiff_t(0);
 	auto result = std::string();
@@ -726,7 +726,7 @@ catch (std::exception& ex)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-inline Parameter_dict parse_arguments(std_span<const char*> args, const Transparent_string_set& no_argument_flags)
+inline Parameter_dict parse_arguments(std_span<const char*> args, const Transparent_string_view_set& no_argument_flags)
 {
 	auto result = Parameter_dict();
 	
@@ -746,7 +746,7 @@ inline Parameter_dict parse_arguments(std_span<const char*> args, const Transpar
 		}
 		else if (arg.size() >= 2 and arg[0] == '-' and (std::isalnum(static_cast<unsigned char>(arg[1])) or (arg[1] == '-')))
 		{
-			last_flag = result.try_emplace(std::string(arg)).first;
+			last_flag = result.try_emplace(arg).first;
 			
 			if (std_contains(no_argument_flags, arg))
 			{
@@ -781,7 +781,7 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 	{
 		for (const auto& name : it->second)
 		{
-			result.names_.insert(std::move(name));
+			result.names_.insert(name);
 		}
 	}
 	
