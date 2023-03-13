@@ -659,11 +659,6 @@ try
 	
 	auto content = handle_content(original_content, parameters);
 	
-	if (not path.empty() and content.size() < original_content.size())
-	{
-		strict_mode->file_truncated(path);
-	}
-	
 	if (not parameters.in_place_)
 	{
 		auto osyncstream = std_osyncstream(std::cout, std_osyncstream::cout_mtx);
@@ -677,6 +672,8 @@ try
 	}
 	else if (content.size() < original_content.size())
 	{
+		strict_mode->file_truncated(path);
+		
 		auto ofs = std::ofstream(path);
 		
 		if (ofs.fail())
@@ -766,11 +763,11 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 	if (std_contains(parameters, "-i") or std_contains(parameters, "--in-place"))
 	{
 		result.in_place_ = true;
-	}
-	
-	if (std_contains(parameters, "--strict"))
-	{
-		result.strict_mode_ = true;
+		
+		if (std_contains(parameters, "--strict"))
+		{
+			result.strict_mode_ = true;
+		}
 	}
 	
 	return result;
