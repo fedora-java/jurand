@@ -19,7 +19,7 @@ auto bind_handle_file(std::filesystem::path&& path)
 	};
 }
 
-struct Strict_mode_enabled : Strict_mode
+struct Strict_mode_enabled final : Strict_mode
 {
 	std::atomic<bool> any_annotation_removed_ = false;
 	std::mutex mutex_;
@@ -95,7 +95,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		return 1;
 	}
 	
-	auto fileroots = std_span<std::string>(parameter_dict.find("")->second);
+	const auto fileroots = std_span<std::string>(parameter_dict.find("")->second);
 	
 	if (fileroots.empty())
 	{
@@ -120,7 +120,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		
 		if (not std::filesystem::exists(to_handle))
 		{
-			std::cout << to_handle.native() << ": File does not exist" << "\n";
+			std::cout << "jurand: file does not exist: " << to_handle.native() << "\n";
 			return 2;
 		}
 		
@@ -130,6 +130,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 			{
 				strict_mode_enabled.files_truncated_.try_emplace(to_handle, std::pair(to_handle, false));
 			}
+			
 			tasks.emplace_back(bind_handle_file(std::move(to_handle)));
 		}
 		else if (std::filesystem::is_directory(to_handle))
@@ -146,6 +147,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 					{
 						strict_mode_enabled.files_truncated_.try_emplace(to_handle, std::pair(fileroot, false));
 					}
+					
 					tasks.emplace_back(bind_handle_file(std::move(to_handle)));
 				}
 			}
