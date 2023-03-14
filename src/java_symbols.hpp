@@ -34,8 +34,8 @@ inline bool std_ends_with(std::string_view string, std::string_view suffix)
 
 struct std_osyncstream : protected std::lock_guard<std::mutex>
 {
-	static inline auto cout_mtx = std::mutex();
-	static inline auto clog_mtx = std::mutex();
+	inline static auto cout_mtx = std::mutex();
+	inline static auto clog_mtx = std::mutex();
 	
 	~std_osyncstream()
 	{
@@ -100,6 +100,7 @@ struct std_span
 	const Type* end() const noexcept {return end_;}
 	
 	bool empty() const noexcept {return begin_ == end_;}
+	std::size_t size() const noexcept {return end_ - begin_;}
 	
 	Type* begin_ = nullptr;
 	Type* end_ = nullptr;
@@ -110,23 +111,88 @@ struct std_span
  */
 namespace java_symbols
 {
+struct Strict_mode
+{
+	virtual ~Strict_mode() = default;
+	virtual void any_annotation_removed() = 0;
+	virtual void pattern_matched(std::string_view) = 0;
+	virtual void name_matched(std::string_view) = 0;
+	virtual void file_truncated(std::string_view) = 0;
+};
+
+inline static Strict_mode* strict_mode = nullptr;
+
 //! Allows comparison between string and string_view
 struct Transparent_string_cmp : std::less<std::string_view>
 {
 	using is_transparent = void;
 };
 
-using Transparent_string_set = std::set<std::string, Transparent_string_cmp>;
+using Transparent_string_view_set = std::set<std::string_view, Transparent_string_cmp>;
 using Transparent_string_map = std::map<std::string, std::string, Transparent_string_cmp>;
 
-using Parameter_dict = std::map<std::string, std::vector<std::string>, Transparent_string_cmp>;
+using Parameter_dict = std::multimap<std::string_view, std::string_view, Transparent_string_cmp>;
+
+struct Named_regex : std::regex
+{
+	Named_regex() = default;
+	
+	Named_regex(const char* pattern, auto&&... args)
+		:
+		Named_regex(std::string_view(pattern), std::forward<decltype(args)>(args)...)
+	{
+	}
+	
+	Named_regex(std::string_view pattern, auto&&... args)
+		:
+		std::regex(pattern.data(), pattern.length(), std::forward<decltype(args)>(args)...),
+		name_(pattern)
+	{
+	}
+	
+	Named_regex(std::string&& pattern, auto&&... args)
+		:
+		std::regex(pattern, std::forward<decltype(args)>(args)...),
+		name_(std::move(pattern))
+	{
+	}
+	
+	operator std::string_view() const noexcept
+	{
+		return name_;
+	}
+	
+private:
+	std::string name_;
+};
+
+struct Path_origin_entry : std::filesystem::path
+{
+	Path_origin_entry() = default;
+	
+	Path_origin_entry(auto&& path, std::string_view origin)
+		:
+		std::filesystem::path(std::forward<decltype(path)>(path)),
+		origin_(origin)
+	{
+	}
+	
+	std::string_view origin() const noexcept
+	{
+		return origin_;
+	}
+	
+private:
+	std::string_view origin_;
+};
 
 struct Parameters
 {
-	std::vector<std::regex> patterns_;
-	Transparent_string_set names_;
+	std::vector<Named_regex> patterns_;
+	Transparent_string_view_set names_;
 	bool also_remove_annotations_ = false;
 	bool in_place_ = false;
+	bool strict_mode_ = false;
 };
 
 /*!
@@ -368,8 +434,8 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
  * 
  * @return The simple class name.
  */
-inline bool name_matches(std::string_view name, std_span<const std::regex> patterns,
-	const Transparent_string_set& names, const Transparent_string_map& imported_names) noexcept
+inline bool name_matches(std::string_view name, std_span<const Named_regex> patterns,
+	const Transparent_string_view_set& names, const Transparent_string_map& imported_names) noexcept
 {
 	auto simple_name = name;
 	
@@ -380,6 +446,11 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
 	
 	if (std_contains(names, simple_name))
 	{
+		if (strict_mode)
+		{
+			strict_mode->name_matched(simple_name);
+		}
+		
 		return true;
 	}
 	
@@ -395,6 +466,11 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
 	{
 		if (std::regex_search(name.begin(), name.end(), pattern))
 		{
+			if (strict_mode)
+			{
+				strict_mode->pattern_matched(pattern);
+			}
+			
 			return true;
 		}
 	}
@@ -413,7 +489,7 @@ inline bool name_matches(std::string_view name, std_span<const std::regex> patte
  * import statement.
  */
 inline std::tuple<std::string, Transparent_string_map> remove_imports(
-	std::string_view content, std_span<const std::regex> patterns, const Transparent_string_set& names)
+	std::string_view content, std_span<const Named_regex> patterns, const Transparent_string_view_set& names)
 {
 	auto result = std::tuple<std::string, Transparent_string_map>();
 	auto& [new_content, removed_classes] = result;
@@ -431,7 +507,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 			auto symbol = next_symbol(content, next_position + 6);
 			auto end_pos = symbol.end() - content.begin();
 			
-			const auto empty_set = Transparent_string_set();
+			const auto empty_set = Transparent_string_view_set();
 			const auto* names_passed = &names;
 			
 			bool is_static = false;
@@ -523,8 +599,8 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
  * 
  * @return The resulting string with annotations removed.
  */
-inline std::string remove_annotations(std::string_view content, std_span<const std::regex> patterns,
-	const Transparent_string_set& names, const Transparent_string_map& imported_names)
+inline std::string remove_annotations(std::string_view content, std_span<const Named_regex> patterns,
+	const Transparent_string_view_set& names, const Transparent_string_map& imported_names)
 {
 	auto position = std::ptrdiff_t(0);
 	auto result = std::string();
@@ -574,13 +650,19 @@ inline std::string handle_content(std::string_view content, const Parameters& pa
 	
 	if (parameters.also_remove_annotations_)
 	{
+		content = new_content;
 		new_content = remove_annotations(new_content, parameters.patterns_, parameters.names_, removed_classes);
+		
+		if (strict_mode and new_content.size() < content.size())
+		{
+			strict_mode->any_annotation_removed();
+		}
 	}
 	
 	return new_content;
 }
 
-inline std::string handle_file(std::filesystem::path path, const Parameters& parameters)
+inline std::string handle_file(const Path_origin_entry& path, const Parameters& parameters)
 try
 {
 	auto original_content = std::string();
@@ -617,6 +699,11 @@ try
 	}
 	else if (content.size() < original_content.size())
 	{
+		if (strict_mode)
+		{
+			strict_mode->file_truncated(path.origin());
+		}
+		
 		auto ofs = std::ofstream(path);
 		
 		if (ofs.fail())
@@ -639,7 +726,7 @@ catch (std::exception& ex)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-inline Parameter_dict parse_arguments(std_span<const char*> args, const Transparent_string_set& no_argument_flags)
+inline Parameter_dict parse_arguments(std_span<const char*> args, const Transparent_string_view_set& no_argument_flags)
 {
 	auto result = Parameter_dict();
 	
@@ -648,8 +735,7 @@ inline Parameter_dict parse_arguments(std_span<const char*> args, const Transpar
 		return result;
 	}
 	
-	auto unflagged_parameters = result.try_emplace("").first;
-	auto last_flag = unflagged_parameters;
+	std::string_view last_flag = "";
 	
 	for (std::string_view arg : args)
 	{
@@ -659,17 +745,19 @@ inline Parameter_dict parse_arguments(std_span<const char*> args, const Transpar
 		}
 		else if (arg.size() >= 2 and arg[0] == '-' and (std::isalnum(static_cast<unsigned char>(arg[1])) or (arg[1] == '-')))
 		{
-			last_flag = result.try_emplace(std::string(arg)).first;
-			
 			if (std_contains(no_argument_flags, arg))
 			{
-				last_flag = unflagged_parameters;
+				result.emplace(arg, "");
+			}
+			else
+			{
+				last_flag = arg;
 			}
 		}
 		else
 		{
-			last_flag->second.emplace_back(arg);
-			last_flag = unflagged_parameters;
+			result.emplace(last_flag, arg);
+			last_flag = "";
 		}
 	}
 	
@@ -680,22 +768,14 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 {
 	auto result = Parameters();
 	
-	if (auto it = parameters.find("-p"); it != parameters.end())
+	for (auto [it, end] = parameters.equal_range("-p"); it != end; ++it)
 	{
-		result.patterns_.reserve(it->second.size());
-		
-		for (const auto& pattern : it->second)
-		{
-			result.patterns_.emplace_back(pattern, std::regex_constants::extended);
-		}
+		result.patterns_.emplace_back(it->second, std::regex_constants::extended);
 	}
 	
-	if (auto it = parameters.find("-n"); it != parameters.end())
+	for (auto [it, end] = parameters.equal_range("-n"); it != end; ++it)
 	{
-		for (const auto& name : it->second)
-		{
-			result.names_.insert(std::move(name));
-		}
+		result.names_.insert(it->second);
 	}
 	
 	if (std_contains(parameters, "-a"))
@@ -706,6 +786,11 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 	if (std_contains(parameters, "-i") or std_contains(parameters, "--in-place"))
 	{
 		result.in_place_ = true;
+		
+		if (std_contains(parameters, "--strict"))
+		{
+			result.strict_mode_ = true;
+		}
 	}
 	
 	return result;

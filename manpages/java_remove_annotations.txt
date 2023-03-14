@@ -10,7 +10,7 @@ java_remove_annotations - remove imports and annotations from Java source files
 
 SYNOPSIS
 --------
-*%java_remove_annotations* <matcher>... [file path]...
+*%java_remove_annotations* [optional flags] <matcher>... [file path]...
 
 DESCRIPTION
 -----------
@@ -28,7 +28,7 @@ File path arguments are handled the following way:
 * Regular files are handled regardless of the file name
 * Directories are traversed recursively and all `.java` files are handled
 
-Order of arguments is irrelevant.
+Arguments can be specified in arbitrary order.
 
 Matcher is one of:
 
@@ -40,6 +40,11 @@ Names are matched for exact equality. Can be specified multiple times.
 Regex patterns to be matched against imported symbols. Each imported symbol
 found in the code is matched against each pattern. Can be specified multiple
 times.
+
+Optional flags:
+
+*--strict*::
+Fail if any of the user provided arguments were redundant.
 
 EXAMPLES
 --------
