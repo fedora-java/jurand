@@ -131,7 +131,7 @@ struct Transparent_string_cmp : std::less<std::string_view>
 using Transparent_string_view_set = std::set<std::string_view, Transparent_string_cmp>;
 using Transparent_string_map = std::map<std::string, std::string, Transparent_string_cmp>;
 
-using Parameter_dict = std::map<std::string_view, std::vector<std::string_view>, Transparent_string_cmp>;
+using Parameter_dict = std::multimap<std::string_view, std::string_view, Transparent_string_cmp>;
 
 struct Named_regex : std::regex
 {
@@ -735,8 +735,7 @@ inline Parameter_dict parse_arguments(std_span<const char*> args, const Transpar
 		return result;
 	}
 	
-	auto unflagged_parameters = result.try_emplace("").first;
-	auto last_flag = unflagged_parameters;
+	std::string_view last_flag = "";
 	
 	for (std::string_view arg : args)
 	{
@@ -746,17 +745,19 @@ inline Parameter_dict parse_arguments(std_span<const char*> args, const Transpar
 		}
 		else if (arg.size() >= 2 and arg[0] == '-' and (std::isalnum(static_cast<unsigned char>(arg[1])) or (arg[1] == '-')))
 		{
-			last_flag = result.try_emplace(arg).first;
-			
 			if (std_contains(no_argument_flags, arg))
 			{
-				last_flag = unflagged_parameters;
+				result.emplace(arg, "");
+			}
+			else
+			{
+				last_flag = arg;
 			}
 		}
 		else
 		{
-			last_flag->second.emplace_back(arg);
-			last_flag = unflagged_parameters;
+			result.emplace(last_flag, arg);
+			last_flag = "";
 		}
 	}
 	
@@ -767,22 +768,14 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 {
 	auto result = Parameters();
 	
-	if (auto it = parameters.find("-p"); it != parameters.end())
+	for (auto [it, end] = parameters.equal_range("-p"); it != end; ++it)
 	{
-		result.patterns_.reserve(it->second.size());
-		
-		for (const auto& pattern : it->second)
-		{
-			result.patterns_.emplace_back(pattern, std::regex_constants::extended);
-		}
+		result.patterns_.emplace_back(it->second, std::regex_constants::extended);
 	}
 	
-	if (auto it = parameters.find("-n"); it != parameters.end())
+	for (auto [it, end] = parameters.equal_range("-n"); it != end; ++it)
 	{
-		for (const auto& name : it->second)
-		{
-			result.names_.insert(name);
-		}
+		result.names_.insert(it->second);
 	}
 	
 	if (std_contains(parameters, "-a"))
