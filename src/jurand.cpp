@@ -209,20 +209,20 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 			exit_code = 3;
 		}
 		
-		for (const auto& pattern_entry : strict_mode_enabled.patterns_matched_)
-		{
-			if (not pattern_entry.second)
-			{
-				std::cout << "jurand: strict mode: pattern " << pattern_entry.first << " did not match anything" << "\n";
-				exit_code = 3;
-			}
-		}
-		
 		for (const auto& name_entry : strict_mode_enabled.names_matched_)
 		{
 			if (not name_entry.second)
 			{
 				std::cout << "jurand: strict mode: simple name " << name_entry.first << " did not match anything" << "\n";
+				exit_code = 3;
+			}
+		}
+		
+		for (const auto& pattern_entry : strict_mode_enabled.patterns_matched_)
+		{
+			if (not pattern_entry.second)
+			{
+				std::cout << "jurand: strict mode: pattern " << pattern_entry.first << " did not match anything" << "\n";
 				exit_code = 3;
 			}
 		}
