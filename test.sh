@@ -29,7 +29,7 @@ test_strict()
 	local filename="${1}"; shift
 	local expected="${1}"; shift
 	cp "test_resources/${expected}" "target/test_resources/${expected}"
-	run_tool "${filename}" --strict "${@}" | grep "strict mode" 1>/dev/null
+	run_tool "${filename}" -s "${@}" | grep "strict mode" 1>/dev/null
 }
 
 ################################################################################
@@ -148,7 +148,7 @@ test_strict "Strict.2.java" "Strict.2.java" -n "z"
 test_strict "Strict.2.java" "Strict.2.java" -a -p "a"
 test_strict "Strict.2.java" "Strict.2.java" -a -n "C"
 # Should print the directory name
-run_tool "directory" -a --strict -n "XXX" | grep "strict mode:.*/directory" 1>/dev/null
+run_tool "directory" -a -s -n "XXX" | grep "strict mode:.*/directory" 1>/dev/null
 
 ################################################################################
 
