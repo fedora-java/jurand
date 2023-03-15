@@ -47,7 +47,7 @@ int main(int argc, const char** argv)
 {
 	auto args = std_span<const char*>(argv + 1, argc - 1);
 	
-	auto parameter_dict = parse_arguments(args, {"-a", "-i", "--in-place", "--strict"});
+	auto parameter_dict = parse_arguments(args, {"-a", "-i", "--in-place", "-s", "--strict"});
 	
 	if (parameter_dict.empty())
 	{
@@ -63,7 +63,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
         -a      also remove annotations used in code
         -i, --in-place
                 replace the contents of files
-        --strict
+        -s, --strict
                 (wih -i only) fail if any of the specified options was redundant
                 and no changes associated with the option were made
 
@@ -203,10 +203,13 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	
 	if (parameters.strict_mode_)
 	{
-		if (parameters.also_remove_annotations_ and not strict_mode_enabled.any_annotation_removed_.load(std::memory_order_acquire))
+		for (const auto& file_entry : strict_mode_enabled.files_truncated_)
 		{
-			std::cout << "jurand: strict mode: -a was specified but no annotation was removed" << "\n";
-			exit_code = 3;
+			if (not file_entry.second)
+			{
+				std::cout << "jurand: strict mode: no changes were made in " << file_entry.first << "\n";
+				exit_code = 3;
+			}
 		}
 		
 		for (const auto& name_entry : strict_mode_enabled.names_matched_)
@@ -227,13 +230,10 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 			}
 		}
 		
-		for (const auto& file_entry : strict_mode_enabled.files_truncated_)
+		if (parameters.also_remove_annotations_ and not strict_mode_enabled.any_annotation_removed_.load(std::memory_order_acquire))
 		{
-			if (not file_entry.second)
-			{
-				std::cout << "jurand: strict mode: no changes were made in " << file_entry.first << "\n";
-				exit_code = 3;
-			}
+			std::cout << "jurand: strict mode: -a was specified but no annotation was removed" << "\n";
+			exit_code = 3;
 		}
 	}
 	

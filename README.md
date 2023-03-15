@@ -22,7 +22,7 @@ jurand [optional flags] <matcher>... [file path]...
         -a      also remove annotations used in code
         -i, --in-place
                 replace the contents of files
-        --strict
+        -s, --strict
                 (wih -i only) fail if any of the specified options was redundant
                 and no changes associated with the option were made
 ```
@@ -48,11 +48,11 @@ The tool writes the results to standard output unless **`-i`** option is
 specified in which case it will replace the original files' content.
 
 Additionally, when doing in-place modifications, it is possible to also specify
-**`--strict`** which will cause the tool invocation to fail in the following
-cases:
+**`-s`** or **`--strict`** which will cause the tool invocation to fail in the
+following cases:
 
 * No changes were made to any of the user-provided file or directory subtree
-*  One of the matchers did not match anything
-*  **`-a`** was specified but no annotation was removed
+* One of the matchers did not match anything
+* **`-a`** was specified but no annotation was removed
 
 Unicode literals (`\uXXXX`) are currently not recognized.

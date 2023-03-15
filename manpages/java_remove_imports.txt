@@ -40,7 +40,7 @@ times.
 
 Optional flags:
 
-*--strict*::
+*-s, --strict*::
 Fail if any of the user provided arguments were redundant.
 
 EXAMPLES

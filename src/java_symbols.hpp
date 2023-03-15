@@ -794,7 +794,7 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 	{
 		result.in_place_ = true;
 		
-		if (std_contains(parameters, "--strict"))
+		if (std_contains(parameters, "-s") or std_contains(parameters, "--strict"))
 		{
 			result.strict_mode_ = true;
 		}
