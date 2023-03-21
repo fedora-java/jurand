@@ -206,6 +206,15 @@ pub fn next_annotation(content: &[u8], mut position: usize) -> (&[u8], std::vec:
 	return (&content[position .. end_pos], result);
 }
 
+pub struct Parameters
+{
+	pub patterns : std::vec::Vec<regex::bytes::Regex>,
+	pub names : std::collections::BTreeSet<std::vec::Vec<u8>>,
+	pub also_remove_annotations : bool,
+	pub in_place : bool,
+	pub strict_mode : bool,
+}
+
 fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
 	names: &std::collections::BTreeSet<std::vec::Vec<u8>>,
 	imported_names: &std::collections::BTreeMap<std::vec::Vec<u8>, std::vec::Vec<u8>>) -> bool
@@ -217,8 +226,11 @@ fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
 		simple_name = &name[pos + 1 ..];
 	}
 	
+	
 	if names.contains(simple_name)
 	{
+		// strict_mode.map(|s| s.name_matched(name));
+		
 		return true;
 	}
 	
@@ -234,6 +246,8 @@ fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
 	{
 		if pattern.is_match(name)
 		{
+			// strict_mode.map(|s| s.pattern_matched(pattern));
+			
 			return true;
 		}
 	}
@@ -241,8 +255,9 @@ fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
 	return false;
 }
 
-pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex], names: &std::collections::BTreeSet<std::vec::Vec<u8>>)
-	-> (std::vec::Vec<u8>, std::collections::BTreeMap<std::vec::Vec<u8>, std::vec::Vec<u8>>)
+pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex],
+	names: &std::collections::BTreeSet<std::vec::Vec<u8>>)
+-> (std::vec::Vec<u8>, std::collections::BTreeMap<std::vec::Vec<u8>, std::vec::Vec<u8>>)
 {
 	let mut result = (std::vec::Vec::<u8>::new(), std::collections::BTreeMap::<std::vec::Vec<u8>, std::vec::Vec<u8>>::new());
 	let (ref mut new_content, ref mut removed_classes) = result;
@@ -345,7 +360,8 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex], names: &
 
 pub fn remove_annotations(content: &[u8], patterns: &[regex::bytes::Regex],
 	names: &std::collections::BTreeSet<std::vec::Vec<u8>>,
-	imported_names: &std::collections::BTreeMap<std::vec::Vec<u8>, std::vec::Vec<u8>>) -> std::vec::Vec<u8>
+	imported_names: &std::collections::BTreeMap<std::vec::Vec<u8>, std::vec::Vec<u8>>)
+-> std::vec::Vec<u8>
 {
 	let mut position : usize = 0;
 	let mut result = std::vec::Vec::<u8>::new();
@@ -387,29 +403,25 @@ pub fn remove_annotations(content: &[u8], patterns: &[regex::bytes::Regex],
 	return result;
 }
 
-pub struct Parameters
-{
-	pub patterns : std::vec::Vec<regex::bytes::Regex>,
-	pub names : std::collections::BTreeSet<std::vec::Vec<u8>>,
-	pub also_remove_annotations : bool,
-	pub in_place : bool,
-	pub strict_mode : bool,
-}
-
 fn handle_content(content: &[u8], parameters: &Parameters) -> std::vec::Vec<u8>
 {
 	let (mut new_content, removed_classes) = remove_imports(content, parameters.patterns.as_slice(), &parameters.names);
 	
 	if parameters.also_remove_annotations
 	{
-		// content = new_content.as_str();
-		new_content = remove_annotations(&new_content, &parameters.patterns, &parameters.names, &removed_classes);
+		let content = new_content;
+		new_content = remove_annotations(&content, &parameters.patterns, &parameters.names, &removed_classes);
+		
+		if new_content.len() < content.len()
+		{
+			// strict_mode.map(|s| s.any_annotation_removed());
+		}
 	}
 	
 	return new_content;
 }
 
-pub fn handle_file(path: &std::path::Path, parameters: &Parameters) -> std::io::Result<std::vec::Vec<u8>>
+pub fn handle_file(path: std::ffi::OsString, parameters: &Parameters) -> std::io::Result<std::vec::Vec<u8>>
 {
 	let mut original_content = std::vec::Vec::<u8>::new();
 	
@@ -419,7 +431,7 @@ pub fn handle_file(path: &std::path::Path, parameters: &Parameters) -> std::io::
 	}
 	else
 	{
-		std::fs::File::open(path)?.read_to_end(&mut original_content)?;
+		std::fs::File::open(&path)?.read_to_end(&mut original_content)?;
 	}
 	
 	let content = handle_content(&original_content, parameters);
@@ -439,7 +451,9 @@ pub fn handle_file(path: &std::path::Path, parameters: &Parameters) -> std::io::
 	}
 	else if content.len() < original_content.len()
 	{
-		std::fs::OpenOptions::new().write(true).truncate(true).open(path)?.write(content.as_slice())?;
+		// strict_mode.map(|b| b.file_truncated(path));
+		
+		std::fs::OpenOptions::new().write(true).truncate(true).open(&path)?.write(content.as_slice())?;
 		let mut ostream = std::io::stdout().lock();
 		ostream.write(b"Removing symbols from file ")?;
 		ostream.write(os_str_bytes::RawOsStr::new(path.as_os_str()).as_raw_bytes())?;
@@ -507,7 +521,6 @@ pub fn interpret_args(parameters: &ParameterDict) -> Parameters
 		in_place : false,
 		strict_mode : false,
 	};
-	
 	
 	if let Some(patterns) = parameters.get(std::ffi::OsStr::new("-p"))
 	{

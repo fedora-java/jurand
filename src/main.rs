@@ -37,13 +37,6 @@ fn main() -> std::process::ExitCode
 	
 	let parameters = interpret_args(&parameter_dict);
 	
-	/*
-	if parameters.strict_mode
-	{
-		strict_mode = &strict_mode_enabled;
-	}
-	*/
-	
 	if parameters.names.is_empty() && parameters.patterns.is_empty()
 	{
 		println!("{}", "jurand: no matcher specified");
@@ -60,7 +53,7 @@ fn main() -> std::process::ExitCode
 			return std::process::ExitCode::from(1);
 		}
 		
-		handle_file(std::path::Path::new(""), &parameters).unwrap();
+		handle_file("".into(), &parameters).unwrap();
 		
 		return std::process::ExitCode::SUCCESS;
 	}
@@ -122,7 +115,7 @@ fn main() -> std::process::ExitCode
 					break;
 				}
 				
-				handle_file(std::path::Path::new(&files.pop().unwrap()), &parameters).unwrap();
+				handle_file(files.pop().unwrap(), &parameters).unwrap();
 			}
 		}));
 	}
@@ -132,12 +125,10 @@ fn main() -> std::process::ExitCode
 		thread.join().unwrap();
 	}
 	
-	// for entry in files
+	if parameters.strict_mode
 	{
-		// println!("{}", entry.file_name().to_str().unwrap());
+		// collect
 	}
-	/*
-	*/
 	
 	return std::process::ExitCode::SUCCESS;
 }
