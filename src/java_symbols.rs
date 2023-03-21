@@ -13,7 +13,7 @@ pub fn ignore_whitespace_comments(content: &[u8], mut position: usize) -> usize
 		
 		let result = position;
 		
-		if content[position..].starts_with(b"//")
+		if content[position ..].starts_with(b"//")
 		{
 			position += 2;
 			
@@ -32,7 +32,7 @@ pub fn ignore_whitespace_comments(content: &[u8], mut position: usize) -> usize
 				position += 1;
 			}
 		}
-		else if content[position..].starts_with(b"/*")
+		else if content[position ..].starts_with(b"/*")
 		{
 			position += 2;
 			
@@ -42,7 +42,7 @@ pub fn ignore_whitespace_comments(content: &[u8], mut position: usize) -> usize
 				{
 					return content.len();
 				}
-				else if &content[position..position + 2] == b"*/"
+				else if &content[position .. position + 2] == b"*/"
 				{
 					position += 2;
 					break;
@@ -66,7 +66,7 @@ fn is_identifier_char(c: u8) -> bool
 	return c == b'_' || (! c.is_ascii_punctuation() && ! c.is_ascii_whitespace());
 }
 
-pub fn next_symbol(content: &[u8], mut position: usize) -> (&[u8], usize, usize)
+pub fn next_symbol(content: &[u8], mut position: usize) -> (&[u8], usize)
 {
 	let mut symbol_length = 0;
 	
@@ -88,7 +88,7 @@ pub fn next_symbol(content: &[u8], mut position: usize) -> (&[u8], usize, usize)
 		}
 	}
 	
-	return (&content[position..position + symbol_length], position, position + symbol_length);
+	return (&content[position .. position + symbol_length], position + symbol_length);
 }
 
 pub fn find_token(content: &[u8], token: &str, mut position: usize, alphanumeric: bool, mut stack: usize) -> usize
@@ -102,7 +102,7 @@ pub fn find_token(content: &[u8], token: &str, mut position: usize, alphanumeric
 			break;
 		}
 		
-		if (token != ")" || stack == 0) && content[position..].starts_with(token.as_bytes())
+		if (token != ")" || stack == 0) && content[position ..].starts_with(token.as_bytes())
 			&& ! (alphanumeric && ((position > 0 && is_identifier_char(content[position - 1]))
 				|| (position + token.len() < content.len() && (is_identifier_char(content[position + token.len()])))))
 		{
@@ -110,7 +110,7 @@ pub fn find_token(content: &[u8], token: &str, mut position: usize, alphanumeric
 		}
 		else if content[position] == b'\''
 		{
-			if content[position..].starts_with(b"'\\''")
+			if content[position ..].starts_with(b"'\\''")
 			{
 				position += 3;
 			}
@@ -133,11 +133,11 @@ pub fn find_token(content: &[u8], token: &str, mut position: usize, alphanumeric
 			
 			while position < content.len() && content[position] != b'"'
 			{
-				if content[position..].starts_with(b"\\\\")
+				if content[position ..].starts_with(b"\\\\")
 				{
 					position += 2;
 				}
-				else if content[position..].starts_with(b"\\\"")
+				else if content[position ..].starts_with(b"\\\"")
 				{
 					position += 2;
 				}
@@ -172,7 +172,7 @@ pub fn next_annotation(content: &[u8], mut position: usize) -> (&[u8], std::vec:
 	if position < content.len()
 	{
 		let mut symbol;
-		(symbol, _, end_pos) = next_symbol(content, position + 1);
+		(symbol, end_pos) = next_symbol(content, position + 1);
 		let mut new_end_pos = end_pos;
 		
 		while ! symbol.is_empty()
@@ -199,11 +199,11 @@ pub fn next_annotation(content: &[u8], mut position: usize) -> (&[u8], std::vec:
 			result.extend_from_slice(symbol);
 			expecting_dot = ! expecting_dot;
 			end_pos = new_end_pos;
-			(symbol, _, new_end_pos) = next_symbol(content, new_end_pos);
+			(symbol, new_end_pos) = next_symbol(content, new_end_pos);
 		}
 	}
 	
-	return (&content[position..end_pos], result);
+	return (&content[position .. end_pos], result);
 }
 
 fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
@@ -214,7 +214,7 @@ fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
 	
 	if let Some(pos) = name.iter().rposition(|&b| b == b'.')
 	{
-		simple_name = &name[pos + 1..];
+		simple_name = &name[pos + 1 ..];
 	}
 	
 	if names.contains(simple_name)
@@ -257,7 +257,7 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex], names: &
 		if next_position < content.len()
 		{
 			let mut import_name = std::vec::Vec::<u8>::new();
-			let (mut symbol, _, mut end_pos) = next_symbol(content, next_position + 6);
+			let (mut symbol, mut end_pos) = next_symbol(content, next_position + 6);
 			
 			let empty_set = std::collections::BTreeSet::new();
 			let mut names_passed = names;
@@ -268,7 +268,7 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex], names: &
 			{
 				is_static = true;
 				names_passed = &empty_set;
-				(symbol, _, end_pos) = next_symbol(content, end_pos);
+				(symbol, end_pos) = next_symbol(content, end_pos);
 			}
 			
 			while symbol != b";"
@@ -282,7 +282,7 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex], names: &
 				}
 				
 				import_name.extend_from_slice(symbol);
-				(symbol, _, end_pos) = next_symbol(content, end_pos);
+				(symbol, end_pos) = next_symbol(content, end_pos);
 			}
 			
 			// Skip whitespace until one newline but only if newline is found
@@ -336,7 +336,7 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex], names: &
 			next_position = end_pos;
 		}
 		
-		new_content.extend_from_slice(&content[position..copy_end]);
+		new_content.extend_from_slice(&content[position .. copy_end]);
 		position = next_position;
 	}
 	
@@ -422,13 +422,6 @@ pub fn handle_file(path: &std::path::Path, parameters: &Parameters) -> std::io::
 		std::fs::File::open(path)?.read_to_end(&mut original_content)?;
 	}
 	
-	/*
-	let mut ostream = std::io::stdout().lock();
-	ostream.write(b"Removing symbols from file... ")?;
-	ostream.write(os_str_bytes::RawOsStr::new(path.as_os_str()).as_raw_bytes())?;
-	ostream.write(b"\n")?;
-	*/
-	
 	let content = handle_content(&original_content, parameters);
 	
 	if ! parameters.in_place
@@ -446,7 +439,7 @@ pub fn handle_file(path: &std::path::Path, parameters: &Parameters) -> std::io::
 	}
 	else if content.len() < original_content.len()
 	{
-		std::fs::OpenOptions::new().write(true).open(path)?.write(content.as_slice())?;
+		std::fs::OpenOptions::new().write(true).truncate(true).open(path)?.write(content.as_slice())?;
 		let mut ostream = std::io::stdout().lock();
 		ostream.write(b"Removing symbols from file ")?;
 		ostream.write(os_str_bytes::RawOsStr::new(path.as_os_str()).as_raw_bytes())?;
