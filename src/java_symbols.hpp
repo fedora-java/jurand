@@ -257,7 +257,7 @@ inline bool is_identifier_char(char c) noexcept
  * sequence of alphanumeric characters or a single non-aphanumeric character or
  * an empty string if the end has been reached.
  */
-inline std::string_view next_symbol(std::string_view content, std::ptrdiff_t position = 0) noexcept
+inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view content, std::ptrdiff_t position = 0) noexcept
 {
 	auto symbol_length = std::ptrdiff_t(0);
 	
@@ -279,7 +279,7 @@ inline std::string_view next_symbol(std::string_view content, std::ptrdiff_t pos
 		}
 	}
 	
-	return content.substr(position, symbol_length);
+	return std::tuple(content.substr(position, symbol_length), position + symbol_length);
 }
 
 /*!
@@ -385,8 +385,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 	if (position < std_ssize(content))
 	{
 		auto symbol = std::string_view();
-		symbol = next_symbol(content, position + 1);
-		end_pos = symbol.end() - content.begin();
+		std::tie(symbol, end_pos) = next_symbol(content, position + 1);
 		auto new_end_pos = end_pos;
 		
 		while (not symbol.empty())
@@ -413,8 +412,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 			result += symbol;
 			expecting_dot = not expecting_dot;
 			end_pos = new_end_pos;
-			symbol = next_symbol(content, new_end_pos);
-			new_end_pos = symbol.end() - content.begin();
+			std::tie(symbol, new_end_pos) = next_symbol(content, new_end_pos);
 		}
 	}
 	
@@ -504,8 +502,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 		if (next_position < std_ssize(content))
 		{
 			auto import_name = std::string();
-			auto symbol = next_symbol(content, next_position + 6);
-			auto end_pos = symbol.end() - content.begin();
+			auto [symbol, end_pos] = next_symbol(content, next_position + 6);
 			
 			const auto empty_set = Transparent_string_view_set();
 			const auto* names_passed = &names;
@@ -516,8 +513,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 			{
 				is_static = true;
 				names_passed = &empty_set;
-				symbol = next_symbol(content, end_pos);
-				end_pos = symbol.end() - content.begin();
+				std::tie(symbol, end_pos) = next_symbol(content, end_pos);
 			}
 			
 			while (symbol != ";")
@@ -531,8 +527,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 				}
 				
 				import_name += symbol;
-				symbol = next_symbol(content, end_pos);
-				end_pos = symbol.end() - content.begin();
+				std::tie(symbol, end_pos) = next_symbol(content, end_pos);
 			}
 			
 			// Skip whitespace until one newline but only if newline is found

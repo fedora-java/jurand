@@ -28,13 +28,13 @@ int main()
 	assert_that(ignore_whitespace_comments("/**/ a", 0) == 5);
 	assert_that(ignore_whitespace_comments("//a\n", 0) == 4);
 	
-	assert_that(next_symbol("") == "");
-	assert_that(next_symbol(" ") == "");
-	assert_that(next_symbol("(foo") == "(");
-	assert_that(next_symbol("foo") == "foo");
-	assert_that(next_symbol(" foo ") == "foo");
-	assert_that(next_symbol("//\n\nfoo") == "foo");
-	assert_that(next_symbol("/* */ foo ") == "foo");
+	assert_that(std::get<0>(next_symbol("")) == "");
+	assert_that(std::get<0>(next_symbol(" ")) == "");
+	assert_that(std::get<0>(next_symbol("(foo")) == "(");
+	assert_that(std::get<0>(next_symbol("foo")) == "foo");
+	assert_that(std::get<0>(next_symbol(" foo ")) == "foo");
+	assert_that(std::get<0>(next_symbol("//\n\nfoo")) == "foo");
+	assert_that(std::get<0>(next_symbol("/* */ foo ")) == "foo");
 	
 	assert_that(find_token("@", "@") == 0);
 	assert_that(find_token(" @", "@") == 1);
