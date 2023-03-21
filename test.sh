@@ -3,7 +3,7 @@
 set -e
 
 # Unit tests
-./target/bin/jurand_test
+cargo test
 
 rm -rf target/test_resources
 mkdir -p target/test_resources
@@ -12,7 +12,7 @@ run_tool()
 {
 	local filename="${1}"; shift
 	cp -r "test_resources/${filename}" "target/test_resources/${filename}"
-	./target/bin/jurand -i "target/test_resources/${filename}" "${@}"
+	./target/debug/jurand -i "target/test_resources/${filename}" "${@}"
 }
 
 test_file()
@@ -35,42 +35,42 @@ test_strict()
 ################################################################################
 # Tests for simple invocations and return codes
 
-if ! ./target/bin/jurand | grep 'Usage:'; then
+if ! ./target/debug/jurand | grep 'Usage:'; then
 	echo "fail: Usage string not printed"
 	exit 1
 fi
 
-if ! ./target/bin/jurand -h | grep 'Usage:'; then
+if ! ./target/debug/jurand -h | grep 'Usage:'; then
 	echo "fail: Usage string not printed"
 	exit 1
 fi
 
-if ./target/bin/jurand -i; then
+if ./target/debug/jurand -i; then
 	echo "fail: should have failed"
 	exit 1
 fi
 
-if ./target/bin/jurand -n; then
+if ./target/debug/jurand -n; then
 	echo "fail: should have failed"
 	exit 1
 fi
 
-if ./target/bin/jurand -p; then
+if ./target/debug/jurand -p; then
 	echo "fail: should have failed"
 	exit 1
 fi
 
-if ./target/bin/jurand nonexisting_file -n "A"; then
+if ./target/debug/jurand nonexisting_file -n "A"; then
 	echo "fail: should have failed"
 	exit 1
 fi
 
-if [ -n "$(echo "import A;" | ./target/bin/jurand -n "A")" ]; then
+if [ -n "$(echo "import A;" | ./target/debug/jurand -n "A")" ]; then
 	echo "fail: output should be empty"
 	exit 1
 fi
 
-if [ "$(echo "import A;" | ./target/bin/jurand -n "B")" != "import A;" ]; then
+if [ "$(echo "import A;" | ./target/debug/jurand -n "B")" != "import A;" ]; then
 	echo "fail: output should be identical to input"
 	exit 1
 fi
