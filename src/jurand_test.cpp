@@ -1,8 +1,19 @@
 #include <iostream>
+#include <sstream>
 
 #include <java_symbols.hpp>
 
 using namespace java_symbols;
+
+static void assert_eq(const auto& expected, const auto& actual)
+{
+	if (expected != actual)
+	{
+		auto message = std::stringstream();
+		message << "Test failed: different values: expected: " << expected << ", actual: " << actual;
+		throw std::runtime_error(std::move(message).str());
+	}
+}
 
 static void assert_that(bool value)
 {
@@ -18,95 +29,95 @@ int main()
 	
 	using next_annotation_t = std::tuple<std::string_view, std::string>;
 	
-	assert_that(ignore_whitespace_comments("a", 0) == 0);
-	assert_that(ignore_whitespace_comments("ab", 1) == 1);
-	assert_that(ignore_whitespace_comments("/", 0) == 0);
-	assert_that(ignore_whitespace_comments("*", 0) == 0);
-	assert_that(ignore_whitespace_comments("//", 0) == 2);
-	assert_that(ignore_whitespace_comments("/**/", 0) == 4);
-	assert_that(ignore_whitespace_comments("/* a */", 0) == 7);
-	assert_that(ignore_whitespace_comments("/**/ a", 0) == 5);
-	assert_that(ignore_whitespace_comments("//a\n", 0) == 4);
+	assert_eq(0, ignore_whitespace_comments("a", 0));
+	assert_eq(1, ignore_whitespace_comments("ab", 1));
+	assert_eq(0, ignore_whitespace_comments("/", 0));
+	assert_eq(0, ignore_whitespace_comments("*", 0));
+	assert_eq(2, ignore_whitespace_comments("//", 0));
+	assert_eq(4, ignore_whitespace_comments("/**/", 0));
+	assert_eq(7, ignore_whitespace_comments("/* a */", 0));
+	assert_eq(5, ignore_whitespace_comments("/**/ a", 0));
+	assert_eq(4, ignore_whitespace_comments("//a\n", 0));
 	
-	assert_that(std::get<0>(next_symbol("")) == "");
-	assert_that(std::get<0>(next_symbol(" ")) == "");
-	assert_that(std::get<0>(next_symbol("(foo")) == "(");
-	assert_that(std::get<0>(next_symbol("foo")) == "foo");
-	assert_that(std::get<0>(next_symbol(" foo ")) == "foo");
-	assert_that(std::get<0>(next_symbol("//\n\nfoo")) == "foo");
-	assert_that(std::get<0>(next_symbol("/* */ foo ")) == "foo");
+	assert_eq("", std::get<0>(next_symbol("")));
+	assert_eq("", std::get<0>(next_symbol(" ")));
+	assert_eq("(", std::get<0>(next_symbol("(foo")));
+	assert_eq("foo", std::get<0>(next_symbol("foo")));
+	assert_eq("foo", std::get<0>(next_symbol(" foo ")));
+	assert_eq("foo", std::get<0>(next_symbol("//\n\nfoo")));
+	assert_eq("foo", std::get<0>(next_symbol("/* */ foo ")));
 	
-	assert_that(find_token("@", "@") == 0);
-	assert_that(find_token(" @", "@") == 1);
-	assert_that(find_token("(@)", "@") == 1);
-	assert_that(find_token("//\n@", "@") == 3);
-	assert_that(find_token("/*\n*/\n@", "@") == 6);
+	assert_eq(0, find_token("@", "@"));
+	assert_eq(1, find_token(" @", "@"));
+	assert_eq(1, find_token("(@)", "@"));
+	assert_eq(3, find_token("//\n@", "@"));
+	assert_eq(6, find_token("/*\n*/\n@", "@"));
 	
-	assert_that(find_token("' '@", "@") == 3);
-	assert_that(find_token("'\''@", "@") == 4);
-	assert_that(find_token("'\\uFFFE'@", "@") == 8);
-	assert_that(find_token("\"//\"@", "@") == 4);
-	assert_that(find_token("\"/*\"@", "@") == 4);
+	assert_eq(3, find_token("' '@", "@"));
+	assert_eq(4, find_token("'\''@", "@"));
+	assert_eq(8, find_token("'\\uFFFE'@", "@"));
+	assert_eq(4, find_token("\"//\"@", "@"));
+	assert_eq(4, find_token("\"/*\"@", "@"));
 	
-	assert_that(find_token("())", ")") == 2);
-	assert_that(find_token("()", ")", 1) == 1);
-	assert_that(find_token("(()))", ")") == 4);
-	assert_that(find_token("'\"'@", "@") == 3);
+	assert_eq(2, find_token("())", ")"));
+	assert_eq(1, find_token("()", ")", 1));
+	assert_eq(4, find_token("(()))", ")"));
+	assert_eq(3, find_token("'\"'@", "@"));
 	
-	assert_that(find_token("// @", "@") == 4);
-	assert_that(find_token("// @\n", "@") == 5);
+	assert_eq(4, find_token("// @", "@"));
+	assert_eq(5, find_token("// @\n", "@"));
 	
-	assert_that(find_token("/*@*/", "@") == 5);
-	assert_that(find_token("/* @ */", "@") == 7);
-	assert_that(find_token("/*\n@ */", "@") == 7);
-	assert_that(find_token("// /*@", "@") == 6);
-	assert_that(find_token("/**//*@ */", "@") == 10);
-	assert_that(find_token("/**///@", "@") == 7);
+	assert_eq(5, find_token("/*@*/", "@"));
+	assert_eq(7, find_token("/* @ */", "@"));
+	assert_eq(7, find_token("/*\n@ */", "@"));
+	assert_eq(6, find_token("// /*@", "@"));
+	assert_eq(10, find_token("/**//*@ */", "@"));
+	assert_eq(7, find_token("/**///@", "@"));
 	
-	assert_that(find_token("'@'", "@") == 3);
-	assert_that(find_token(R"('\uFFFE')", R"(\u)") == 8);
-	assert_that(find_token(R"('\'')", R"(\')") == 4);
-	assert_that(find_token(R"("@")", "@") == 3);
-	assert_that(find_token(R"("""@")", "@") == 5);
-	assert_that(find_token(R"("" "@")", "@") == 6);
-	assert_that(find_token(R"("\\" "@")", "@") == 8);
-	assert_that(find_token(R"("\\\"" "@")", "@") == 10);
+	assert_eq(3, find_token("'@'", "@"));
+	assert_eq(8, find_token(R"('\uFFFE')", R"(\u)"));
+	assert_eq(4, find_token(R"('\'')", R"(\')"));
+	assert_eq(3, find_token(R"("@")", "@"));
+	assert_eq(5, find_token(R"("""@")", "@"));
+	assert_eq(6, find_token(R"("" "@")", "@"));
+	assert_eq(8, find_token(R"("\\" "@")", "@"));
+	assert_eq(10, find_token(R"("\\\"" "@")", "@"));
 	
-	assert_that(find_token("()", ")") == 2);
-	assert_that(find_token("(())", ")") == 4);
+	assert_eq(2, find_token("()", ")"));
+	assert_eq(4, find_token("(())", ")"));
 	
-	assert_that(find_token("noimport", "import", 0, true) == 8);
-	assert_that(find_token("_import", "import", 0, true) == 7);
-	assert_that(find_token("/import", "import", 0, true) == 1);
-	assert_that(find_token("+import", "import", 0, true) == 1);
+	assert_eq(8, find_token("noimport", "import", 0, true));
+	assert_eq(7, find_token("_import", "import", 0, true));
+	assert_eq(1, find_token("/import", "import", 0, true));
+	assert_eq(1, find_token("+import", "import", 0, true));
 	
-	assert_that(find_token("importnot", "import", 0, true) == 9);
-	assert_that(find_token("import_", "import", 0, true) == 7);
-	assert_that(find_token("import/", "import", 0, true) == 0);
-	assert_that(find_token("import+", "import", 0, true) == 0);
+	assert_eq(9, find_token("importnot", "import", 0, true));
+	assert_eq(7, find_token("import_", "import", 0, true));
+	assert_eq(0, find_token("import/", "import", 0, true));
+	assert_eq(0, find_token("import+", "import", 0, true));
 	
-	assert_that(next_annotation("@A") == next_annotation_t("@A", "A"));
-	assert_that(next_annotation("@A\n") == next_annotation_t("@A", "A"));
-	assert_that(next_annotation("@A()") == next_annotation_t("@A()", "A"));
+	assert_that(next_annotation_t("@A", "A") == next_annotation("@A"));
+	assert_that(next_annotation_t("@A", "A") == next_annotation("@A\n"));
+	assert_that(next_annotation_t("@A()", "A") == next_annotation("@A()"));
 	
-	assert_that(next_annotation("@A class B {}") == next_annotation_t("@A", "A"));
+	assert_that(next_annotation_t("@A", "A") == next_annotation("@A class B {}"));
 	
-	assert_that(next_annotation("@A(a = ')')") == next_annotation_t("@A(a = ')')", "A"));
-	assert_that(next_annotation("@A(a = ')') class B {}") == next_annotation_t("@A(a = ')')", "A"));
+	assert_that(next_annotation_t("@A(a = ')')", "A") == next_annotation("@A(a = ')')"));
+	assert_that(next_annotation_t("@A(a = ')')", "A") == next_annotation("@A(a = ')') class B {}"));
 	
-	assert_that(next_annotation("@A(a = \")\")") == next_annotation_t("@A(a = \")\")", "A"));
-	assert_that(next_annotation("@A(a = \")))\" /*)))*/) class B {}") == next_annotation_t("@A(a = \")))\" /*)))*/)", "A"));
-	assert_that(next_annotation("@A(/* ) */)") == next_annotation_t("@A(/* ) */)", "A"));
-	assert_that(next_annotation("method(@A Object o)") == next_annotation_t("@A", "A"));
+	assert_that(next_annotation_t("@A(a = \")\")", "A") == next_annotation("@A(a = \")\")"));
+	assert_that(next_annotation_t("@A(a = \")))\" /*)))*/)", "A") == next_annotation("@A(a = \")))\" /*)))*/) class B {}"));
+	assert_that(next_annotation_t("@A(/* ) */)", "A") == next_annotation("@A(/* ) */)"));
+	assert_that(next_annotation_t("@A", "A") == next_annotation("method(@A Object o)"));
 	
-	assert_that(next_annotation("@A(\nvalue = \")\" /* ) */\n// )\n)\n") == next_annotation_t("@A(\nvalue = \")\" /* ) */\n// )\n)", "A"));
+	assert_that(next_annotation_t("@A(\nvalue = \")\" /* ) */\n// )\n)", "A") == next_annotation("@A(\nvalue = \")\" /* ) */\n// )\n)\n"));
 	
-	assert_that(next_annotation(" // @A\n/* @B */\nvalue = \"@C\";\n@D") == next_annotation_t("@D", "D"));
+	assert_that(next_annotation_t("@D", "D") == next_annotation(" // @A\n/* @B */\nvalue = \"@C\";\n@D"));
 	
-	assert_that(next_annotation("@a.b.C") == next_annotation_t("@a.b.C", "a.b.C"));
-	assert_that(next_annotation("@a/**/.B") == next_annotation_t("@a/**/.B", "a.B"));
+	assert_that(next_annotation_t("@a.b.C", "a.b.C") == next_annotation("@a.b.C"));
+	assert_that(next_annotation_t("@a/**/.B", "a.B") == next_annotation("@a/**/.B"));
 	
-	assert_that(next_annotation("@A(value = /* ) */ \")\")//)") == next_annotation_t("@A(value = /* ) */ \")\")", "A"));
+	assert_that(next_annotation_t("@A(value = /* ) */ \")\")", "A") == next_annotation("@A(value = /* ) */ \")\")//)"));
 	
 	{
 		constexpr std::string_view original_content = R"(
@@ -120,95 +131,95 @@ import com.google.common.util.concurrent.Service;)";
 		
 		args.emplace_back("Runnable");
 
-		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
+		assert_eq(R"(
 import java.util.List;
 import static java.util.*;
 import static java.lang.String.valueOf;
-import com.google.common.util.concurrent.Service;)");
+import com.google.common.util.concurrent.Service;)", std::get<0>(remove_imports(original_content, args, {})));
 		args.clear();
 		
 		args.emplace_back("[*]");
 		
-		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
+		assert_eq(R"(
 import java.lang.Runnable;
 import java.util.List;
 import static java.lang.String.valueOf;
-import com.google.common.util.concurrent.Service;)");
+import com.google.common.util.concurrent.Service;)", std::get<0>(remove_imports(original_content, args, {})));
 		args.clear();
 		
 		args.emplace_back("java[.]util");
-		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
+		assert_eq(R"(
 import java.lang.Runnable;
 import static java.lang.String.valueOf;
-import com.google.common.util.concurrent.Service;)");
+import com.google.common.util.concurrent.Service;)", std::get<0>(remove_imports(original_content, args, {})));
 		args.clear();
 		
 		args.emplace_back("util");
-		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
+		assert_eq(R"(
 import java.lang.Runnable;
 import static java.lang.String.valueOf;
-)");
+)", std::get<0>(remove_imports(original_content, args, {})));
 		args.clear();
 		
 		args.emplace_back("java");
-		assert_that(std::get<0>(remove_imports(original_content, args, {})) == R"(
-import com.google.common.util.concurrent.Service;)");
+		assert_eq(R"(
+import com.google.common.util.concurrent.Service;)", std::get<0>(remove_imports(original_content, args, {})));
 		args.clear();
 		
 		args.emplace_back("static");
-		assert_that(std::get<0>(remove_imports(original_content, args, {})) == original_content);
+		assert_eq(original_content, std::get<0>(remove_imports(original_content, args, {})));
 		args.clear();
 		
 		args.emplace_back("A");
-		assert_that(std::get<0>(remove_imports("import A ;", args, {})) == "");
+		assert_eq("", std::get<0>(remove_imports("import A ;", args, {})));
 		args.clear();
 		
 		args.emplace_back("A");
-		assert_that(std::get<0>(remove_imports("import A ; ", args, {})) == " ");
+		assert_eq(" ", std::get<0>(remove_imports("import A ; ", args, {})));
 		args.clear();
 		
 		args.emplace_back("A");
-		assert_that(std::get<0>(remove_imports("import/**/A;", args, {})) == "");
+		assert_eq("", std::get<0>(remove_imports("import/**/A;", args, {})));
 		args.clear();
 		
 		args.emplace_back("A");
-		assert_that(std::get<0>(remove_imports("import/**/A/**/;/**/", args, {})) == "/**/");
+		assert_eq("/**/", std::get<0>(remove_imports("import/**/A/**/;/**/", args, {})));
 		args.clear();
 		
 		args.emplace_back("A");
-		assert_that(std::get<0>(remove_imports("import//\nA;", args, {})) == "");
+		assert_eq("", std::get<0>(remove_imports("import//\nA;", args, {})));
 		args.clear();
 		
 		args.emplace_back("A[.]C");
-		assert_that(std::get<0>(remove_imports("import A./*B;*/C;", args, {})) == "");
+		assert_eq("", std::get<0>(remove_imports("import A./*B;*/C;", args, {})));
 		args.clear();
 		
 		args.emplace_back("A");
-		assert_that(std::get<0>(remove_imports("import static A;", args, {})) == "");
+		assert_eq("", std::get<0>(remove_imports("import static A;", args, {})));
 		args.clear();
 		
 		args.emplace_back("A");
-		assert_that(std::get<0>(remove_imports("import static a . b /**/ . A;", args, {})) == "");
+		assert_eq("", std::get<0>(remove_imports("import static a . b /**/ . A;", args, {})));
 		args.clear();
 		
 		args.emplace_back("static");
-		assert_that(std::get<0>(remove_imports("import xstatic .A;", args, {})) == "");
+		assert_eq("", std::get<0>(remove_imports("import xstatic .A;", args, {})));
 		args.clear();
 		
 		args.emplace_back("static");
-		assert_that(std::get<0>(remove_imports("import staticx.A;", args, {})) == "");
+		assert_eq("", std::get<0>(remove_imports("import staticx.A;", args, {})));
 		args.clear();
 		
 		args.emplace_back("A");
-		assert_that(std::get<0>(remove_imports("import static/**/A;", args, {})) == "");
+		assert_eq("", std::get<0>(remove_imports("import static/**/A;", args, {})));
 		args.clear();
 		
 		args.emplace_back("A");
-		assert_that(std::get<0>(remove_imports("import/**/static/**/A;", args, {})) == "");
+		assert_eq("", std::get<0>(remove_imports("import/**/static/**/A;", args, {})));
 		args.clear();
 		
 		args.emplace_back("A");
-		assert_that(std::get<0>(remove_imports("import/* A */B;", args, {})) == "import/* A */B;");
+		assert_eq("import/* A */B;", std::get<0>(remove_imports("import/* A */B;", args, {})));
 		args.clear();
 	}
 	
@@ -216,23 +227,23 @@ import com.google.common.util.concurrent.Service;)");
 		auto patterns = std::vector<Named_regex>();
 		
 		patterns.emplace_back("Nullable");
-		assert_that(remove_annotations("new @Nullable Object[initialCapacity];", patterns, {}, {}) == "new Object[initialCapacity];");
+		assert_eq("new Object[initialCapacity];", remove_annotations("new @Nullable Object[initialCapacity];", patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("A");
-		assert_that(remove_annotations("@A(value = /* ) */ \")\")//)", patterns, {}, {}) == "//)");
+		assert_eq("//)", remove_annotations("@A(value = /* ) */ \")\")//)", patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("A");
-		assert_that(remove_annotations(R"(
+		assert_eq("\nclass C {}", remove_annotations(R"(
 @A
-class C {})", patterns, {}, {}) == "\nclass C {}");
+class C {})", patterns, {}, {}));
 		patterns.clear();
 	
 		patterns.emplace_back("A");
-		assert_that(remove_annotations(R"(
+		assert_eq("\n	class C {}", remove_annotations(R"(
 	@A
-	class C {})", patterns, {}, {}) == "\n	class C {}");
+	class C {})", patterns, {}, {}));
 		patterns.clear();
 		
 		constexpr std::string_view original_content = R"(
@@ -242,60 +253,60 @@ class C {})", patterns, {}, {}) == "\nclass C {}");
 @org.junit.jupiter.api.Test)";
 		
 		patterns.emplace_back("SuppressWarnings");
-		assert_that(remove_annotations(original_content, patterns, {}, {}) == R"(
+		assert_eq(R"(
 @SuppressFBWarnings(value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 @org.junit.Test
-@org.junit.jupiter.api.Test)");
+@org.junit.jupiter.api.Test)", remove_annotations(original_content, patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("Suppress");
-		assert_that(remove_annotations(original_content, patterns, {}, {}) == R"(
+		assert_eq(R"(
 @org.junit.Test
-@org.junit.jupiter.api.Test)");
+@org.junit.jupiter.api.Test)", remove_annotations(original_content, patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("org[.]junit[.]Test");
-		assert_that(remove_annotations(original_content, patterns, {}, {}) == R"(
+		assert_eq(R"(
 @SuppressWarnings
 @SuppressFBWarnings(value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
-@org.junit.jupiter.api.Test)");
+@org.junit.jupiter.api.Test)", remove_annotations(original_content, patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("Test");
-		assert_that(remove_annotations(original_content, patterns, {}, {}) == R"(
+		assert_eq(R"(
 @SuppressWarnings
 @SuppressFBWarnings(value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
-)");
+)", remove_annotations(original_content, patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("@SuppressWarnings");
-		assert_that(remove_annotations(original_content, patterns, {}, {}) == original_content);
+		assert_eq(original_content, remove_annotations(original_content, patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("EI_EXPOSE_REP");
-		assert_that(remove_annotations(original_content, patterns, {}, {}) == original_content);
+		assert_eq(original_content, remove_annotations(original_content, patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("A");
-		assert_that(remove_annotations("@a/*A*/.B", patterns, {}, {}) == "@a/*A*/.B");
+		assert_eq("@a/*A*/.B", remove_annotations("@a/*A*/.B", patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("B");
-		assert_that(remove_annotations("@a/*A*/.B", patterns, {}, {}) == "");
+		assert_eq("", remove_annotations("@a/*A*/.B", patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("A");
-		assert_that(remove_annotations("@ A", patterns, {}, {}) == "");
+		assert_eq("", remove_annotations("@ A", patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("A");
-		assert_that(remove_annotations("@//\nA", patterns, {}, {}) == "");
+		assert_eq("", remove_annotations("@//\nA", patterns, {}, {}));
 		patterns.clear();
 		
 		patterns.emplace_back("B");
-		assert_that(remove_annotations("@A/*(B)*/", patterns, {}, {}) == "@A/*(B)*/");
+		assert_eq("@A/*(B)*/", remove_annotations("@A/*(B)*/", patterns, {}, {}));
 		patterns.clear();
 	}
 	
-	std::cout << "PASSED" << "\n";
+	std::cout << "Unit tests PASSED" << "\n";
 }
