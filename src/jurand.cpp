@@ -62,7 +62,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		return 0;
 	}
 	
-	auto files_mutex = std::mutex();
+	auto files_count = std::atomic<std::ptrdiff_t>(0);
 	auto files = std::vector<Path_origin_entry>();
 	files.reserve(32);
 	
@@ -132,23 +132,16 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		{
 			while (true)
 			{
-				auto path = Path_origin_entry();
+				auto index = files_count.fetch_add(1, std::memory_order_acq_rel);
 				
+				if (index >= std::ssize(files))
 				{
-					auto lg = std::lock_guard(files_mutex);
-					
-					if (files.empty())
-					{
-						break;
-					}
-					
-					path = std::move(files.back());
-					files.pop_back();
+					break;
 				}
 				
 				try
 				{
-					handle_file(path, parameters);
+					handle_file(std::move(files[index]), parameters);
 				}
 				catch (std::exception& ex)
 				{
