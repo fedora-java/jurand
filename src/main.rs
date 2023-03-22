@@ -108,14 +108,20 @@ fn main() -> std::process::ExitCode
 		{
 			loop
 			{
-				let mut files = files.lock().unwrap();
+				let file;
 				
-				if files.is_empty()
 				{
-					break;
+					let mut files = files.lock().unwrap();
+					
+					if files.is_empty()
+					{
+						break;
+					}
+					
+					file = files.pop().unwrap();
 				}
 				
-				handle_file(files.pop().unwrap(), &parameters).unwrap();
+				handle_file(file, &parameters).unwrap();
 			}
 		}));
 	}
