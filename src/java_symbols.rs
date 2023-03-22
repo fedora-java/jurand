@@ -215,6 +215,17 @@ pub struct Parameters
 	pub strict_mode : bool,
 }
 
+#[derive(Debug)]
+pub struct StrictMode
+{
+	pub any_annotation_removed : std::sync::atomic::AtomicBool,
+	pub patterns_matched : std::sync::Mutex<std::collections::BTreeMap<String, bool>>,
+	pub names_matched : std::sync::Mutex<std::collections::BTreeMap<std::vec::Vec<u8>, bool>>,
+	pub files_truncated : std::sync::Mutex<std::collections::BTreeMap<std::ffi::OsString, bool>>,
+}
+
+pub static STRICT_MODE : once_cell::sync::OnceCell<StrictMode> = once_cell::sync::OnceCell::new();
+
 fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
 	names: &std::collections::BTreeSet<std::vec::Vec<u8>>,
 	imported_names: &std::collections::BTreeMap<std::vec::Vec<u8>, std::vec::Vec<u8>>) -> bool
@@ -226,10 +237,9 @@ fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
 		simple_name = &name[pos + 1 ..];
 	}
 	
-	
 	if names.contains(simple_name)
 	{
-		// strict_mode.map(|s| s.name_matched(name));
+		STRICT_MODE.get().map(|s| *s.names_matched.lock().unwrap().get_mut(simple_name).unwrap() = true);
 		
 		return true;
 	}
@@ -246,7 +256,7 @@ fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
 	{
 		if pattern.is_match(name)
 		{
-			// strict_mode.map(|s| s.pattern_matched(pattern));
+			STRICT_MODE.get().map(|s| *s.patterns_matched.lock().unwrap().get_mut(pattern.as_str()).unwrap() = true);
 			
 			return true;
 		}
@@ -414,18 +424,18 @@ fn handle_content(content: &[u8], parameters: &Parameters) -> std::vec::Vec<u8>
 		
 		if new_content.len() < content.len()
 		{
-			// strict_mode.map(|s| s.any_annotation_removed());
+			STRICT_MODE.get().map(|s| s.any_annotation_removed.store(true, std::sync::atomic::Ordering::Release));
 		}
 	}
 	
 	return new_content;
 }
 
-pub fn handle_file(path: std::ffi::OsString, parameters: &Parameters) -> std::io::Result<std::vec::Vec<u8>>
+pub fn handle_file(path: &std::ffi::OsStr, origin: &std::ffi::OsStr, parameters: &Parameters) -> std::io::Result<std::vec::Vec<u8>>
 {
 	let mut original_content = std::vec::Vec::<u8>::new();
 	
-	if path.as_os_str().is_empty()
+	if path.is_empty()
 	{
 		std::io::stdin().read_to_end(&mut original_content)?;
 	}
@@ -440,9 +450,9 @@ pub fn handle_file(path: std::ffi::OsString, parameters: &Parameters) -> std::io
 	{
 		let mut ostream = std::io::stdout().lock();
 		
-		if ! path.as_os_str().is_empty()
+		if ! path.is_empty()
 		{
-			ostream.write(os_str_bytes::RawOsStr::new(path.as_os_str()).as_raw_bytes())?;
+			ostream.write(os_str_bytes::RawOsStr::new(path).as_raw_bytes())?;
 			ostream.write(b":\n")?;
 		}
 		
@@ -451,13 +461,13 @@ pub fn handle_file(path: std::ffi::OsString, parameters: &Parameters) -> std::io
 	}
 	else if content.len() < original_content.len()
 	{
-		// strict_mode.map(|b| b.file_truncated(path));
-		
 		std::fs::OpenOptions::new().write(true).truncate(true).open(&path)?.write(content.as_slice())?;
 		let mut ostream = std::io::stdout().lock();
 		ostream.write(b"Removing symbols from file ")?;
-		ostream.write(os_str_bytes::RawOsStr::new(path.as_os_str()).as_raw_bytes())?;
+		ostream.write(os_str_bytes::RawOsStr::new(path).as_raw_bytes())?;
 		ostream.write(b"\n")?;
+		
+		STRICT_MODE.get().map(|s| *s.files_truncated.lock().unwrap().get_mut(origin).unwrap() = true);
 	}
 	
 	return Ok(content);

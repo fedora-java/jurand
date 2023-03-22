@@ -53,12 +53,12 @@ fn main() -> std::process::ExitCode
 			return std::process::ExitCode::from(1);
 		}
 		
-		handle_file("".into(), &parameters).unwrap();
+		handle_file(&std::ffi::OsStr::new(""), &std::ffi::OsStr::new(""), &parameters).unwrap();
 		
 		return std::process::ExitCode::SUCCESS;
 	}
 	
-	let mut files = std::vec::Vec::<std::ffi::OsString>::new();
+	let mut files = std::vec::Vec::<(std::ffi::OsString, std::ffi::OsString)>::new();
 	
 	for &fileroot in fileroots
 	{
@@ -72,7 +72,7 @@ fn main() -> std::process::ExitCode
 		
 		if path.is_file() && ! path.is_symlink()
 		{
-			files.push(path.as_os_str().to_owned());
+			files.push((path.as_os_str().to_owned(), fileroot.to_os_string()));
 		}
 		else if path.is_dir()
 		{
@@ -85,11 +85,22 @@ fn main() -> std::process::ExitCode
 					if entry.is_file() && ! entry.is_symlink()
 						&& os_str_bytes::RawOsStr::new(entry.as_os_str()).ends_with(".java")
 					{
-						files.push(entry.as_os_str().to_owned());
+						files.push((entry.as_os_str().to_owned(), fileroot.to_os_string()));
 					}
 				}
 			}
 		}
+	}
+	
+	if parameters.strict_mode
+	{
+		STRICT_MODE.set(StrictMode
+		{
+			any_annotation_removed : std::sync::atomic::AtomicBool::new(false),
+			patterns_matched : std::sync::Mutex::new(parameters.patterns.iter().map(|p| (p.to_string(), false)).collect()),
+			names_matched : std::sync::Mutex::new(parameters.names.iter().map(|n| (n.to_owned(), false)).collect()),
+			files_truncated : std::sync::Mutex::new(files.iter().map(|(_, origin)| (origin.to_os_string(), false)).collect()),
+		}).unwrap();
 	}
 	
 	let files = std::sync::Arc::new(std::sync::Mutex::new(files));
@@ -109,6 +120,7 @@ fn main() -> std::process::ExitCode
 			loop
 			{
 				let file;
+				let origin;
 				
 				{
 					let mut files = files.lock().unwrap();
@@ -118,10 +130,10 @@ fn main() -> std::process::ExitCode
 						break;
 					}
 					
-					file = files.pop().unwrap();
+					(file, origin) = files.pop().unwrap();
 				}
 				
-				handle_file(file, &parameters).unwrap();
+				handle_file(file.as_os_str(), origin.as_os_str(), &parameters).unwrap();
 			}
 		}));
 	}
@@ -131,10 +143,34 @@ fn main() -> std::process::ExitCode
 		thread.join().unwrap();
 	}
 	
-	if parameters.strict_mode
+	let mut exit_code = std::process::ExitCode::SUCCESS;
+	
+	if let Some(strict) = STRICT_MODE.get()
 	{
-		// collect
+		for (path, _) in strict.files_truncated.lock().unwrap().iter().filter(|(_, &b)| ! b)
+		{
+			println!("jurand: strict mode: no changes were made in {}", path.to_str().unwrap());
+			exit_code = std::process::ExitCode::from(3);
+		}
+		
+		for (name, _) in strict.names_matched.lock().unwrap().iter().filter(|(_, &b)| ! b)
+		{
+			println!("jurand: strict mode: simple name {} did not match anything", std::str::from_utf8(name.as_slice()).unwrap());
+			exit_code = std::process::ExitCode::from(3);
+		}
+		
+		for (pattern, _) in strict.patterns_matched.lock().unwrap().iter().filter(|(_, &b)| ! b)
+		{
+			println!("jurand: strict mode: pattern {} did not match anything", pattern);
+			exit_code = std::process::ExitCode::from(3);
+		}
+		
+		if parameters.also_remove_annotations && ! strict.any_annotation_removed.load(std::sync::atomic::Ordering::Acquire)
+		{
+			println!("jurand: strict mode: -a was specified but no annotation was removed");
+			exit_code = std::process::ExitCode::from(3);
+		}
 	}
 	
-	return std::process::ExitCode::SUCCESS;
+	return exit_code;
 }
