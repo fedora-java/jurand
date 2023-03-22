@@ -13,12 +13,12 @@ jobs:
       - name: Checkout git repository
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: dnf -y install diffutils gcc-c++ libasan libubsan
+        run: dnf -y install diffutils gcc-c++ make libasan libubsan
       - name: Compile
         run: |
           set -x
           CXX=g++
-          CXXFLAGS+=' -g -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG'
+          CXXFLAGS+=' -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG'
           CXXFLAGS+=' -fsanitize=address,undefined'
           
           CXXFLAGS+=' -fconcepts'
@@ -28,6 +28,6 @@ jobs:
           export CXXFLAGS
           export LDLIBS
           
-          ./build.sh
+          make -j8 test-compile
       - name: Test
-        run: ./test.sh
+        run: make test
