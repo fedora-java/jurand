@@ -103,35 +103,32 @@ fn main() -> std::process::ExitCode
 		}).unwrap();
 	}
 	
-	let files = std::sync::Arc::new(std::sync::Mutex::new(files));
+	let files = std::sync::Arc::new(files);
 	let mut threads = std::vec::Vec::<std::thread::JoinHandle<()>>::with_capacity(
 		std::thread::available_parallelism().unwrap_or(std::num::NonZeroUsize::new(1).unwrap()).into()
 	);
 	
 	let parameters = std::sync::Arc::new(parameters);
+	let files_count = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
 	
 	for _ in 0 .. threads.capacity()
 	{
-		let files = std::sync::Arc::clone(&files);
+		let files = files.clone();
 		let parameters = parameters.clone();
+		let files_count = files_count.clone();
 		
 		threads.push(std::thread::spawn(move ||
 		{
 			loop
 			{
-				let file;
-				let origin;
+				let index = files_count.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
 				
+				if index >= files.len()
 				{
-					let mut files = files.lock().unwrap();
-					
-					if files.is_empty()
-					{
-						break;
-					}
-					
-					(file, origin) = files.pop().unwrap();
+					break;
 				}
+				
+				let (file, origin) = &files[index];
 				
 				handle_file(file.as_os_str(), origin.as_os_str(), &parameters).unwrap();
 			}
