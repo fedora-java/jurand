@@ -1,24 +1,23 @@
--include target/deps/*.mk
+include rules.mk
 
-.PHONY: all test-compile test clean
+.PHONY: force all test-compile test clean
 
-all: target/bin/jurand
+all: $(call Executable_file,jurand)
 
-test-compile: target/bin/jurand target/bin/jurand_test
+test-compile: $(call Executable_file,jurand) $(call Executable_file,jurand_test)
 
 test: test.sh test-compile
-	@./test.sh
+	@./$<
 
 clean:
 	@rm -rfv target
 
 CXXFLAGS += -g -std=c++2a -Isrc -Wall -Wextra -Wpedantic
 
-define Executable
-target/bin/$(1): src/$(1).cpp
-	@mkdir -p target/bin target/deps
-	$$(CXX) $$(CXXFLAGS) $$(LDFLAGS) -MD -MF target/deps/$(1).mk -MT $$@ -o $$@ $$< $$(LDLIBS)
-endef
+$(eval $(call Variable_rule, target/compile_flags, $(CXX) $(CXXFLAGS)))
+$(eval $(call Variable_rule, target/link_flags, $(CXX) $(LDFLAGS) $(LDLIBS)))
 
-$(eval $(call Executable,jurand))
-$(eval $(call Executable,jurand_test))
+$(eval $(call Executable_file_rule, jurand, jurand.cpp))
+$(eval $(call Executable_file_rule, jurand_test, jurand_test.cpp))
+
+-include target/dependencies/*.mk
