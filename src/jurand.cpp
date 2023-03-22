@@ -11,7 +11,7 @@ using namespace java_symbols;
 
 int main(int argc, const char** argv)
 {
-	auto args = std_span<const char*>(argv + 1, argc - 1);
+	auto args = std::span<const char*>(argv + 1, argc - 1);
 	
 	auto parameter_dict = parse_arguments(args, {"-a", "-i", "--in-place", "-s", "--strict"});
 	
@@ -47,7 +47,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		return 1;
 	}
 	
-	const auto fileroots = std_span<std::string_view>(parameter_dict.find("")->second);
+	const auto fileroots = std::span<std::string_view>(parameter_dict.find("")->second);
 	
 	if (fileroots.empty())
 	{
@@ -88,7 +88,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 				
 				if (std::filesystem::is_regular_file(to_handle)
 					and not std::filesystem::is_symlink(to_handle)
-					and std_ends_with(to_handle.native(), ".java"))
+					and to_handle.native().ends_with(".java"))
 				{
 					files.emplace_back(Path_origin_entry(std::move(to_handle), fileroot));
 				}

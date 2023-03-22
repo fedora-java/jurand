@@ -16,97 +16,10 @@
 #include <mutex>
 #include <optional>
 #include <type_traits>
+#include <span>
+#include <syncstream>
 
 #include <iostream>
-
-inline std::ptrdiff_t std_ssize(const auto& range) noexcept
-{
-	return std::size(range);
-}
-
-inline bool std_contains(const auto& range, const auto& value) noexcept
-{
-	return range.find(value) != range.end();
-}
-
-inline bool std_ends_with(std::string_view string, std::string_view suffix)
-{
-	return string.length() >= suffix.length() and suffix == std::string_view(string.data() + string.length() - suffix.length(), suffix.length());
-}
-
-struct std_osyncstream : protected std::lock_guard<std::mutex>
-{
-	inline static auto cout_mtx = std::mutex();
-	inline static auto clog_mtx = std::mutex();
-	
-	~std_osyncstream()
-	{
-		stream_.flush();
-	}
-	
-	std_osyncstream(std::ostream& stream, std::mutex& mtx) noexcept
-		:
-		lock_guard(mtx),
-		stream_(stream)
-	{
-	}
-	
-	std_osyncstream& operator<<(const auto& value)
-	{
-		stream_ << value;
-		return *this;
-	}
-	
-	std_osyncstream& write(const char* content, std::streamsize length)
-	{
-		stream_.write(content, length);
-		return *this;
-	}
-	
-	std::ostream& stream_;
-};
-
-template<typename Type>
-struct std_span
-{
-	std_span() = default;
-	
-	std_span(const std_span&) noexcept = default;
-	std_span& operator=(const std_span&) noexcept = default;
-	
-	std_span(Type* begin, Type* end) noexcept
-		:
-		begin_(begin),
-		end_(end)
-	{
-	}
-	
-	std_span(Type* begin, std::size_t size) noexcept
-		:
-		begin_(begin),
-		end_(begin + size)
-	{
-	}
-	
-	std_span(auto&& range) noexcept
-	requires(not std::is_same_v<std_span, std::decay_t<decltype(range)>>)
-		:
-		std_span(std::data(range), std::size(range))
-	{
-	}
-	
-	Type* begin() noexcept {return begin_;}
-	Type* end() noexcept {return end_;}
-	
-	const Type* begin() const noexcept {return begin_;}
-	const Type* end() const noexcept {return end_;}
-	
-	bool empty() const noexcept {return begin_ == end_;}
-	std::size_t size() const noexcept {return end_ - begin_;}
-	
-	Type* begin_ = nullptr;
-	Type* end_ = nullptr;
-};
 
 /*!
  * Helper functions for manipulating java symbols
@@ -195,7 +108,7 @@ struct Parameters
  */
 inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::ptrdiff_t position) noexcept
 {
-	while (position != std_ssize(content))
+	while (position != std::ssize(content))
 	{
 		if (std::isspace(static_cast<unsigned char>(content[position])))
 		{
@@ -211,7 +124,7 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::
 			
 			if (position == std::ptrdiff_t(content.npos))
 			{
-				return std_ssize(content);
+				return std::ssize(content);
 			}
 			
 			++position;
@@ -222,7 +135,7 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::
 			
 			if (position == std::ptrdiff_t(content.npos))
 			{
-				return std_ssize(content);
+				return std::ssize(content);
 			}
 			
 			position += 2;
@@ -252,17 +165,17 @@ inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view
 {
 	auto symbol_length = std::ptrdiff_t(0);
 	
-	if (position < std_ssize(content))
+	if (position < std::ssize(content))
 	{
 		position = ignore_whitespace_comments(content, position);
 		
-		if (position < std_ssize(content))
+		if (position < std::ssize(content))
 		{
 			symbol_length = 1;
 			
 			if (is_identifier_char(content[position]))
 			{
-				while (position + symbol_length != std_ssize(content) and is_identifier_char(content[position + symbol_length]))
+				while (position + symbol_length != std::ssize(content) and is_identifier_char(content[position + symbol_length]))
 				{
 					++symbol_length;
 				}
@@ -290,11 +203,11 @@ inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view
 inline std::ptrdiff_t find_token(std::string_view content, std::string_view token,
 	std::ptrdiff_t position = 0, bool alphanumeric = false, std::ptrdiff_t stack = 0) noexcept
 {
-	while (position + std_ssize(token) <= std_ssize(content))
+	while (position + std::ssize(token) <= std::ssize(content))
 	{
 		position = ignore_whitespace_comments(content, position);
 		
-		if (position == std_ssize(content))
+		if (position == std::ssize(content))
 		{
 			break;
 		}
@@ -303,7 +216,7 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 		
 		if ((token != ")" or stack == 0) and substr == token
 			and not (alphanumeric and ((position > 0 and is_identifier_char(content[position - 1]))
-				or (position + std_ssize(token) < std_ssize(content) and (is_identifier_char(content[position + token.length()]))))))
+				or (position + std::ssize(token) < std::ssize(content) and (is_identifier_char(content[position + token.length()]))))))
 		{
 			return position;
 		}
@@ -319,14 +232,14 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 				{
 					++position;
 				}
-				while (position < std_ssize(content) and content[position] != '\'');
+				while (position < std::ssize(content) and content[position] != '\'');
 			}
 		}
 		else if (content[position] == '"')
 		{
 			++position;
 			
-			while (position < std_ssize(content) and content[position] != '"')
+			while (position < std::ssize(content) and content[position] != '"')
 			{
 				if (content.substr(position, 2) == "\\\\")
 				{
@@ -354,7 +267,7 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 		++position;
 	}
 	
-	return std_ssize(content);
+	return std::ssize(content);
 }
 
 /*!
@@ -369,11 +282,11 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 inline std::tuple<std::string_view, std::string> next_annotation(std::string_view content, std::ptrdiff_t position = 0)
 {
 	auto result = std::string();
-	auto end_pos = std_ssize(content);
+	auto end_pos = std::ssize(content);
 	position = find_token(content, "@", position);
 	bool expecting_dot = false;
 	
-	if (position < std_ssize(content))
+	if (position < std::ssize(content))
 	{
 		auto symbol = std::string_view();
 		std::tie(symbol, end_pos) = next_symbol(content, position + 1);
@@ -387,7 +300,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 				{
 					end_pos = find_token(content, ")", new_end_pos);
 					
-					if (end_pos == std_ssize(content))
+					if (end_pos == std::ssize(content))
 					{
 						result = std::string();
 						position = end_pos;
@@ -466,7 +379,7 @@ inline static auto strict_mode = std::optional<Strict_mode>();
  * 
  * @return The simple class name.
  */
-inline bool name_matches(std::string_view name, std_span<const Named_regex> patterns,
+inline bool name_matches(std::string_view name, std::span<const Named_regex> patterns,
 	const Transparent_string_view_set& names, const Transparent_string_map& imported_names) noexcept
 {
 	auto simple_name = name;
@@ -476,7 +389,7 @@ inline bool name_matches(std::string_view name, std_span<const Named_regex> patt
 		simple_name = name.substr(pos + 1);
 	}
 	
-	if (std_contains(names, simple_name))
+	if (names.contains(simple_name))
 	{
 		if (strict_mode)
 		{
@@ -521,19 +434,19 @@ inline bool name_matches(std::string_view name, std_span<const Named_regex> patt
  * import statement.
  */
 inline std::tuple<std::string, Transparent_string_map> remove_imports(
-	std::string_view content, std_span<const Named_regex> patterns, const Transparent_string_view_set& names)
+	std::string_view content, std::span<const Named_regex> patterns, const Transparent_string_view_set& names)
 {
 	auto result = std::tuple<std::string, Transparent_string_map>();
 	auto& [new_content, removed_classes] = result;
 	new_content.reserve(content.size());
 	auto position = std::ptrdiff_t(0);
 	
-	while (position < std_ssize(content))
+	while (position < std::ssize(content))
 	{
 		auto next_position = find_token(content, "import", position, true);
-		auto copy_end = std_ssize(content);
+		auto copy_end = std::ssize(content);
 		
-		if (next_position < std_ssize(content))
+		if (next_position < std::ssize(content))
 		{
 			auto import_name = std::string();
 			auto [symbol, end_pos] = next_symbol(content, next_position + 6);
@@ -568,7 +481,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 			{
 				auto skip_space = end_pos;
 				
-				while (skip_space != std_ssize(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
+				while (skip_space != std::ssize(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
 				{
 					++skip_space;
 					
@@ -605,7 +518,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 				}
 				
 				// Add only non-star and non-static imports
-				if (not std_ends_with(import_name, "*") and not is_static)
+				if (not import_name.ends_with("*") and not is_static)
 				{
 					removed_classes.try_emplace(std::move(simple_import_name), std::move(import_name));
 				}
@@ -628,18 +541,18 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
  * 
  * @return The resulting string with annotations removed.
  */
-inline std::string remove_annotations(std::string_view content, std_span<const Named_regex> patterns,
+inline std::string remove_annotations(std::string_view content, std::span<const Named_regex> patterns,
 	const Transparent_string_view_set& names, const Transparent_string_map& imported_names)
 {
 	auto position = std::ptrdiff_t(0);
 	auto result = std::string();
 	result.reserve(content.size());
 	
-	while (position < std_ssize(content))
+	while (position < std::ssize(content))
 	{
 		auto [annotation, annotation_name] = next_annotation(content, position);
-		auto next_position = std_ssize(content);
-		auto copy_end = std_ssize(content);
+		auto next_position = std::ssize(content);
+		auto copy_end = std::ssize(content);
 		
 		if (annotation.begin() != content.end())
 		{
@@ -652,12 +565,12 @@ inline std::string remove_annotations(std::string_view content, std_span<const N
 				
 				auto skip_space = next_position;
 				
-				while (skip_space != std_ssize(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
+				while (skip_space != std::ssize(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
 				{
 					++skip_space;
 				}
 				
-				if (skip_space != std_ssize(content))
+				if (skip_space != std::ssize(content))
 				{
 					next_position = skip_space;
 				}
@@ -717,7 +630,7 @@ try
 	
 	if (not parameters.in_place_)
 	{
-		auto osyncstream = std_osyncstream(std::cout, std_osyncstream::cout_mtx);
+		auto osyncstream = std::osyncstream(std::cout);
 		
 		if (not path.empty())
 		{
@@ -737,7 +650,7 @@ try
 		
 		ofs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
 		ofs.write(content.c_str(), content.size());
-		std_osyncstream(std::clog, std_osyncstream::clog_mtx) << "Removing symbols from file " << path.native() << "\n";
+		std::osyncstream(std::clog) << "Removing symbols from file " << path.native() << "\n";
 		
 		if (strict_mode)
 		{
@@ -755,7 +668,7 @@ catch (std::exception& ex)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-inline Parameter_dict parse_arguments(std_span<const char*> args, const Transparent_string_view_set& no_argument_flags)
+inline Parameter_dict parse_arguments(std::span<const char*> args, const Transparent_string_view_set& no_argument_flags)
 {
 	auto result = Parameter_dict();
 	
@@ -777,7 +690,7 @@ inline Parameter_dict parse_arguments(std_span<const char*> args, const Transpar
 		{
 			last_flag = result.try_emplace(arg).first;
 			
-			if (std_contains(no_argument_flags, arg))
+			if (no_argument_flags.contains(arg))
 			{
 				last_flag = unflagged_parameters;
 			}
@@ -814,16 +727,16 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 		}
 	}
 	
-	if (std_contains(parameters, "-a"))
+	if (parameters.contains("-a"))
 	{
 		result.also_remove_annotations_ = true;
 	}
 	
-	if (std_contains(parameters, "-i") or std_contains(parameters, "--in-place"))
+	if (parameters.contains("-i") or parameters.contains("--in-place"))
 	{
 		result.in_place_ = true;
 		
-		if (std_contains(parameters, "-s") or std_contains(parameters, "--strict"))
+		if (parameters.contains("-s") or parameters.contains("--strict"))
 		{
 			result.strict_mode_ = true;
 		}
