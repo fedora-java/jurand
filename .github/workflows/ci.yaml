@@ -17,10 +17,12 @@ jobs:
       - name: Checkout git repository
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: |
-          dnf -y install diffutils gcc-toolset-12-gcc-c++ make libasan libubsan
-          source /opt/rh/gcc-toolset-12/enable
+        run: dnf -y install diffutils gcc-toolset-12-gcc-c++ make libasan libubsan
       - name: Compile
-        run: make -j8 test-compile
+        run: |
+          source /opt/rh/gcc-toolset-12/enable
+          make -j8 test-compile
       - name: Test
-        run: make test
+        run: |
+          source /opt/rh/gcc-toolset-12/enable
+          make test
