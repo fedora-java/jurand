@@ -41,11 +41,6 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	
 	const auto parameters = interpret_args(parameter_dict);
 	
-	if (parameters.strict_mode_)
-	{
-		strict_mode.emplace();
-	}
-	
 	if (parameters.names_.empty() and parameters.patterns_.empty())
 	{
 		std::cout << "jurand: no matcher specified" << "\n";
@@ -107,9 +102,11 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		return 1;
 	}
 	
-	if (strict_mode)
+	if (parameters.strict_mode_)
 	{
-		for (const auto& fileroot : fileroots)
+		strict_mode.emplace();
+		
+		for (auto fileroot : fileroots)
 		{
 			strict_mode->files_truncated_.lock().get().try_emplace(fileroot);
 		}

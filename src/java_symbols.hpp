@@ -500,7 +500,7 @@ inline bool name_matches(std::string_view name, std_span<const Named_regex> patt
 		{
 			if (strict_mode)
 			{
-				strict_mode->patterns_matched_.lock().get().at(simple_name) = true;
+				strict_mode->patterns_matched_.lock().get().at(pattern) = true;
 			}
 			
 			return true;
