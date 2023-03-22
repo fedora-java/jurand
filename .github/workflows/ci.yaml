@@ -11,8 +11,8 @@ jobs:
     container: registry.access.redhat.com/ubi8:latest
     env:
       CXX: g++
-      CXXFLAGS: -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG # -fsanitize=address,undefined
-      # LDFLAGS: -fsanitize=address,undefined
+      CXXFLAGS: -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG -pthread # -fsanitize=address,undefined
+      LDFLAGS: -pthread # -fsanitize=address,undefined
     steps:
       - name: Checkout git repository
         uses: actions/checkout@v3
