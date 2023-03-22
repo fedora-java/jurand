@@ -10,14 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     container: registry.access.redhat.com/ubi8:latest
     env:
-      CXX: /opt/rh/gcc-toolset-12/root/usr/bin/g++
+      CXX: g++
       CXXFLAGS: -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG -fsanitize=address,undefined
       LDFLAGS: -fsanitize=address,undefined
     steps:
       - name: Checkout git repository
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: dnf -y install diffutils gcc-toolset-12-gcc-c++ make libasan libubsan
+        run: |
+          dnf -y install diffutils gcc-toolset-12-gcc-c++ make libasan libubsan
+          source /opt/rh/gcc-toolset-12/enable
       - name: Compile
         run: make -j8 test-compile
       - name: Test
