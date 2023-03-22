@@ -3,6 +3,7 @@
 #include <cctype>
 #include <cstddef>
 
+#include <atomic>
 #include <filesystem>
 #include <fstream>
 #include <regex>
@@ -11,6 +12,7 @@
 #include <map>
 #include <string_view>
 #include <tuple>
+#include <optional>
 #include <mutex>
 #include <optional>
 #include <type_traits>
@@ -111,17 +113,6 @@ struct std_span
  */
 namespace java_symbols
 {
-struct Strict_mode
-{
-	virtual ~Strict_mode() = default;
-	virtual void any_annotation_removed() = 0;
-	virtual void pattern_matched(std::string_view) = 0;
-	virtual void name_matched(std::string_view) = 0;
-	virtual void file_truncated(std::string_view) = 0;
-};
-
-inline static Strict_mode* strict_mode = nullptr;
-
 //! Allows comparison between string and string_view
 struct Transparent_string_cmp : std::less<std::string_view>
 {
@@ -419,6 +410,49 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 	return std::tuple(content.substr(position, end_pos - position), std::move(result));
 }
 
+template<typename Type, typename Mutex_type>
+struct Locked : std::reference_wrapper<Type>
+{
+	Locked(Type& value, Mutex_type& mutex)
+		:
+		std::reference_wrapper<Type>::reference_wrapper(value),
+		lock_(mutex)
+	{
+	}
+	
+private:
+	std::lock_guard<Mutex_type> lock_;
+};
+
+template<typename Type>
+struct Mutex
+{
+	
+	Locked<Type, std::mutex> lock()
+	{
+		return Locked(value_, mutex_);
+	}
+	
+	Locked<const Type, std::mutex> lock() const
+	{
+		return Locked(value_, mutex_);
+	}
+	
+private:
+	std::mutex mutex_;
+	Type value_;
+};
+
+struct Strict_mode
+{
+	std::atomic<bool> any_annotation_removed_ = false;
+	Mutex<std::map<std::string_view, bool, Transparent_string_cmp>> patterns_matched_;
+	Mutex<std::map<std::string_view, bool, Transparent_string_cmp>> names_matched_;
+	Mutex<std::map<std::string_view, bool>> files_truncated_;
+};
+
+inline static auto strict_mode = std::optional<Strict_mode>();
+
 /*!
  * @param name Class name found in code, may be fully-qualified or simple.
  * @param patterns A range of patterns.
@@ -446,7 +480,7 @@ inline bool name_matches(std::string_view name, std_span<const Named_regex> patt
 	{
 		if (strict_mode)
 		{
-			strict_mode->name_matched(simple_name);
+			strict_mode->names_matched_.lock().get().at(simple_name) = true;
 		}
 		
 		return true;
@@ -466,7 +500,7 @@ inline bool name_matches(std::string_view name, std_span<const Named_regex> patt
 		{
 			if (strict_mode)
 			{
-				strict_mode->pattern_matched(pattern);
+				strict_mode->patterns_matched_.lock().get().at(simple_name) = true;
 			}
 			
 			return true;
@@ -650,7 +684,7 @@ inline std::string handle_content(std::string_view content, const Parameters& pa
 		
 		if (strict_mode and new_content.size() < content.size())
 		{
-			strict_mode->any_annotation_removed();
+			strict_mode->any_annotation_removed_.store(true, std::memory_order_release);
 		}
 	}
 	
@@ -694,11 +728,6 @@ try
 	}
 	else if (content.size() < original_content.size())
 	{
-		if (strict_mode)
-		{
-			strict_mode->file_truncated(path.origin());
-		}
-		
 		auto ofs = std::ofstream(path);
 		
 		if (ofs.fail())
@@ -709,6 +738,11 @@ try
 		ofs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
 		ofs.write(content.c_str(), content.size());
 		std_osyncstream(std::clog, std_osyncstream::clog_mtx) << "Removing symbols from file " << path.native() << "\n";
+		
+		if (strict_mode)
+		{
+			strict_mode->files_truncated_.lock().get().at(path.origin()) = true;
+		}
 	}
 	
 	return content;

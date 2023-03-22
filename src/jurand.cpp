@@ -1,7 +1,6 @@
 #include <array>
 #include <mutex>
 #include <thread>
-#include <future>
 #include <utility>
 #include <functional>
 #include <atomic>
@@ -9,39 +8,6 @@
 #include <java_symbols.hpp>
 
 using namespace java_symbols;
-
-struct Strict_mode_enabled final : Strict_mode
-{
-	std::atomic<bool> any_annotation_removed_ = false;
-	std::mutex mutex_;
-	std::map<std::string_view, bool, Transparent_string_cmp> patterns_matched_;
-	std::map<std::string_view, bool, Transparent_string_cmp> names_matched_;
-	std::map<std::string_view, bool> files_truncated_;
-	
-	void any_annotation_removed() override
-	{
-		any_annotation_removed_.store(true, std::memory_order_release);
-	}
-	
-	void pattern_matched(std::string_view pattern) override
-	{
-		auto lg = std::lock_guard(mutex_);
-		patterns_matched_.at(pattern) = true;
-	}
-	
-	void name_matched(std::string_view simple_name) override
-	{
-		auto lg = std::lock_guard(mutex_);
-		names_matched_.at(simple_name) = true;
-	}
-	
-	void file_truncated(std::string_view path) override
-	{
-		auto lg = std::lock_guard(mutex_);
-		files_truncated_.at(path) = true;
-	}
-}
-static strict_mode_enabled;
 
 int main(int argc, const char** argv)
 {
@@ -77,7 +43,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	
 	if (parameters.strict_mode_)
 	{
-		strict_mode = &strict_mode_enabled;
+		strict_mode.emplace();
 	}
 	
 	if (parameters.names_.empty() and parameters.patterns_.empty())
@@ -101,9 +67,9 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		return 0;
 	}
 	
-	auto tasks_end = std::atomic<std::size_t>(0);
-	auto tasks = std::vector<std::packaged_task<void(const Parameters&)>>();
-	tasks.reserve(32);
+	auto files_mutex = std::mutex();
+	auto files = std::vector<Path_origin_entry>();
+	files.reserve(32);
 	
 	for (auto fileroot : fileroots)
 	{
@@ -117,7 +83,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		
 		if (std::filesystem::is_regular_file(to_handle) and not std::filesystem::is_symlink(to_handle))
 		{
-			tasks.emplace_back(std::bind(&handle_file, Path_origin_entry(std::move(to_handle), fileroot), std::placeholders::_1));
+			files.emplace_back(Path_origin_entry(std::move(to_handle), fileroot));
 		}
 		else if (std::filesystem::is_directory(to_handle))
 		{
@@ -129,37 +95,39 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 					and not std::filesystem::is_symlink(to_handle)
 					and std_ends_with(to_handle.native(), ".java"))
 				{
-					tasks.emplace_back(std::bind(&handle_file, Path_origin_entry(std::move(to_handle), fileroot), std::placeholders::_1));
+					files.emplace_back(Path_origin_entry(std::move(to_handle), fileroot));
 				}
 			}
 		}
 	}
 	
-	if (tasks.empty())
+	if (files.empty())
 	{
 		std::cout << "jurand: no valid input files" << "\n";
 		return 1;
 	}
 	
-	if (parameters.strict_mode_)
+	if (strict_mode)
 	{
 		for (const auto& fileroot : fileroots)
 		{
-			strict_mode_enabled.files_truncated_.try_emplace(fileroot);
+			strict_mode->files_truncated_.lock().get().try_emplace(fileroot);
 		}
 		
 		for (const auto& pattern : parameters.patterns_)
 		{
-			strict_mode_enabled.patterns_matched_.try_emplace(pattern);
+			strict_mode->patterns_matched_.lock().get().try_emplace(pattern);
 		}
 		
 		for (const auto& name : parameters.names_)
 		{
-			strict_mode_enabled.names_matched_.try_emplace(name);
+			strict_mode->names_matched_.lock().get().try_emplace(name);
 		}
 	}
 	
-	auto threads = std::vector<std::thread>(std::min(std::size(tasks), std::max<std::size_t>(1, std::thread::hardware_concurrency())));
+	auto threads = std::vector<std::thread>(std::min(std::size(files), std::max<std::size_t>(1, std::thread::hardware_concurrency())));
+	
+	auto errors = Mutex<std::vector<std::string>>();
 	
 	for (auto& thread : threads)
 	{
@@ -167,13 +135,27 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		{
 			while (true)
 			{
-				if (auto index = tasks_end.fetch_add(1, std::memory_order_acq_rel); index < tasks.size())
+				auto path = Path_origin_entry();
+				
 				{
-					tasks[index](parameters);
+					auto lg = std::lock_guard(files_mutex);
+					
+					if (files.empty())
+					{
+						break;
+					}
+					
+					path = std::move(files.back());
+					files.pop_back();
 				}
-				else
+				
+				try
 				{
-					break;
+					handle_file(path, parameters);
+				}
+				catch (std::exception& ex)
+				{
+					errors.lock().get().emplace_back(ex.what());
 				}
 			}
 		});
@@ -188,22 +170,19 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	
 	int exit_code = 0;
 	
-	for (auto& task : tasks)
+	if (auto& errors_unlocked = errors.lock().get(); not errors_unlocked.empty())
 	{
-		try
+		exit_code = 2;
+		std::cout << "jurand: exceptions occured during the process:\n";
+		
+		for (const auto& error : errors_unlocked)
 		{
-			task.get_future().get();
-		}
-		catch (std::exception& ex)
-		{
-			std::cout << "jurand: an exception occured during the process: " << ex.what() << "\n";
-			exit_code = 2;
+			std::cout << "* " << error << "\n";
 		}
 	}
-	
-	if (parameters.strict_mode_)
+	else if (strict_mode)
 	{
-		for (const auto& file_entry : strict_mode_enabled.files_truncated_)
+		for (const auto& file_entry : strict_mode->files_truncated_.lock().get())
 		{
 			if (not file_entry.second)
 			{
@@ -212,7 +191,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 			}
 		}
 		
-		for (const auto& name_entry : strict_mode_enabled.names_matched_)
+		for (const auto& name_entry : strict_mode->names_matched_.lock().get())
 		{
 			if (not name_entry.second)
 			{
@@ -221,7 +200,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 			}
 		}
 		
-		for (const auto& pattern_entry : strict_mode_enabled.patterns_matched_)
+		for (const auto& pattern_entry : strict_mode->patterns_matched_.lock().get())
 		{
 			if (not pattern_entry.second)
 			{
@@ -230,7 +209,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 			}
 		}
 		
-		if (parameters.also_remove_annotations_ and not strict_mode_enabled.any_annotation_removed_.load(std::memory_order_acquire))
+		if (parameters.also_remove_annotations_ and not strict_mode->any_annotation_removed_.load(std::memory_order_acquire))
 		{
 			std::cout << "jurand: strict mode: -a was specified but no annotation was removed" << "\n";
 			exit_code = 3;
