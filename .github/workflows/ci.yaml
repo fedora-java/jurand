@@ -22,10 +22,12 @@ jobs:
           CXXFLAGS+=' -fsanitize=address,undefined'
           
           CXXFLAGS+=' -fconcepts'
+          LDFLAGS+=' -fsanitize=address,undefined'
           LDLIBS+=' -lstdc++fs'
           
           export CXX
           export CXXFLAGS
+          export LDFLAGS
           export LDLIBS
           
           make -j8 test-compile
