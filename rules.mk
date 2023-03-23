@@ -16,6 +16,16 @@ $(1): force
 	@echo '$(2)' | cmp -s - $$@ || echo '$(2)' > $$@
 endef
 
+define Manpage_rule # source_file
+target/manpages/$(1).xml: manpages/$(1).txt
+	@mkdir -p $$(dir $$@)
+	asciidoc -b docbook -d manpage -o $$@ $$<
+
+target/manpages/$(1).7: target/manpages/$(1).xml
+	xmlto man --skip-validation -o target/manpages target/manpages/$(1).xml
+manpages += target/manpages/$(1).7
+endef
+
 define Dependency_file_rule # source_file
 $(call Dependency_file,$(1)): src/$(1)
 	@mkdir -p $$(dir $$@)
