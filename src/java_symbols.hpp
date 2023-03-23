@@ -21,11 +21,6 @@
 
 #include <iostream>
 
-/*!
- * Helper functions for manipulating java symbols
- */
-namespace java_symbols
-{
 //! Allows comparison between string and string_view
 struct Transparent_string_cmp : std::less<std::string_view>
 {
@@ -90,6 +85,39 @@ private:
 	std::string_view origin_;
 };
 
+template<typename Type, typename Mutex_type>
+struct Locked : std::reference_wrapper<Type>
+{
+	Locked(Type& value, Mutex_type& mutex)
+		:
+		std::reference_wrapper<Type>::reference_wrapper(value),
+		lock_(mutex)
+	{
+	}
+	
+private:
+	std::lock_guard<Mutex_type> lock_;
+};
+
+template<typename Type>
+struct Mutex
+{
+	
+	Locked<Type, std::mutex> lock()
+	{
+		return Locked(value_, mutex_);
+	}
+	
+	Locked<const Type, std::mutex> lock() const
+	{
+		return Locked(value_, mutex_);
+	}
+	
+private:
+	std::mutex mutex_;
+	Type value_;
+};
+
 struct Parameters
 {
 	std::vector<Named_regex> patterns_;
@@ -99,6 +127,21 @@ struct Parameters
 	bool strict_mode_ = false;
 };
 
+struct Strict_mode
+{
+	std::atomic<bool> any_annotation_removed_ = false;
+	Mutex<std::map<std::string_view, bool, Transparent_string_cmp>> patterns_matched_;
+	Mutex<std::map<std::string_view, bool, Transparent_string_cmp>> names_matched_;
+	Mutex<std::map<std::string_view, bool>> files_truncated_;
+};
+
+inline static auto strict_mode = std::optional<Strict_mode>();
+
+/*!
+ * Helper functions for manipulating java symbols
+ */
+namespace java_symbols
+{
 /*!
  * Iterates over @p content starting at @p position to find the first character
  * which is not part of a Java comment nor a whitespace character.
@@ -322,49 +365,6 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 	
 	return std::tuple(content.substr(position, end_pos - position), std::move(result));
 }
-
-template<typename Type, typename Mutex_type>
-struct Locked : std::reference_wrapper<Type>
-{
-	Locked(Type& value, Mutex_type& mutex)
-		:
-		std::reference_wrapper<Type>::reference_wrapper(value),
-		lock_(mutex)
-	{
-	}
-	
-private:
-	std::lock_guard<Mutex_type> lock_;
-};
-
-template<typename Type>
-struct Mutex
-{
-	
-	Locked<Type, std::mutex> lock()
-	{
-		return Locked(value_, mutex_);
-	}
-	
-	Locked<const Type, std::mutex> lock() const
-	{
-		return Locked(value_, mutex_);
-	}
-	
-private:
-	std::mutex mutex_;
-	Type value_;
-};
-
-struct Strict_mode
-{
-	std::atomic<bool> any_annotation_removed_ = false;
-	Mutex<std::map<std::string_view, bool, Transparent_string_cmp>> patterns_matched_;
-	Mutex<std::map<std::string_view, bool, Transparent_string_cmp>> names_matched_;
-	Mutex<std::map<std::string_view, bool>> files_truncated_;
-};
-
-inline static auto strict_mode = std::optional<Strict_mode>();
 
 /*!
  * @param name Class name found in code, may be fully-qualified or simple.
