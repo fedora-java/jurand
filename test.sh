@@ -36,47 +36,47 @@ test_strict()
 # Tests for simple invocations and return codes
 
 if ! ./target/bin/jurand | grep 'Usage:'; then
-	echo "fail: Usage string not printed"
+	echo "[FAIL] Usage string not printed"
 	exit 1
 fi
 
 if ! ./target/bin/jurand -h | grep 'Usage:'; then
-	echo "fail: Usage string not printed"
+	echo "[FAIL] Usage string not printed"
 	exit 1
 fi
 
 if ./target/bin/jurand -i; then
-	echo "fail: should have failed"
+	echo "[FAIL] Should have failed"
 	exit 1
 fi
 
 if ./target/bin/jurand -i -n 'D'; then
-	echo "fail: should have failed"
+	echo "[FAIL] Should have failed"
 	exit 1
 fi
 
 if ./target/bin/jurand -n; then
-	echo "fail: should have failed"
+	echo "[FAIL] Should have failed"
 	exit 1
 fi
 
 if ./target/bin/jurand -p; then
-	echo "fail: should have failed"
+	echo "[FAIL] Should have failed"
 	exit 1
 fi
 
 if ./target/bin/jurand nonexisting_file -n "A"; then
-	echo "fail: should have failed"
+	echo "[FAIL] Should have failed"
 	exit 1
 fi
 
 if [ -n "$(echo "import A;" | ./target/bin/jurand -n "A")" ]; then
-	echo "fail: output should be empty"
+	echo "[FAIL] Output should be empty"
 	exit 1
 fi
 
 if [ "$(echo "import A;" | ./target/bin/jurand -n "B")" != "import A;" ]; then
-	echo "fail: output should be identical to input"
+	echo "[FAIL] Output should be identical to input"
 	exit 1
 fi
 
@@ -84,7 +84,7 @@ fi
 	cp "test_resources/Simple.java" "target/test_resources/Simple.java"
 	
 	if ! ./target/bin/jurand -a -n 'D' "target/test_resources/Simple.java" | grep "target/test_resources/Simple.java"; then
-		echo "fail: should have printed the file name"
+		echo "[FAIL] Should have printed the file name"
 		exit 1
 	fi
 	
@@ -94,7 +94,7 @@ fi
 	cp -r "test_resources/directory/resources" -t "target/test_resources"
 	
 	if ./target/bin/jurand -i -n 'D' "target/test_resources/resources"; then
-		echo "fail: should have failed"
+		echo "[FAIL] Should have failed"
 		exit 1
 	fi
 	
@@ -188,7 +188,7 @@ run_tool "directory" -a -s -n "XXX" | grep "strict mode:.*/directory" 1>/dev/nul
 cp -r "test_resources/Simple.java" "target/test_resources/Simple.java"
 chmod a-r "target/test_resources/Simple.java"
 if ./target/bin/jurand -i "target/test_resources/Simple.java" -a -s -n "D"; then
-	echo "fail: should have failed"
+	echo "[FAIL] Should have failed"
 	exit 1
 fi
 rm -f "target/test_resources/Simple.java"
@@ -197,11 +197,11 @@ rm -f "target/test_resources/Simple.java"
 cp -r "test_resources/Simple.java" "target/test_resources/Simple.java"
 chmod a-w "target/test_resources/Simple.java"
 if ./target/bin/jurand -i "target/test_resources/Simple.java" -a -s -n "D"; then
-	echo "fail: should have failed"
+	echo "[FAIL] Should have failed"
 	exit 1
 fi
 rm -f "target/test_resources/Simple.java"
 
 ################################################################################
 
-echo Tests PASSED
+echo "[PASS] Integration tests"

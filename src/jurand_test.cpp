@@ -308,5 +308,5 @@ class C {})", patterns, {}, {}));
 		patterns.clear();
 	}
 	
-	std::cout << "Unit tests PASSED" << "\n";
+	std::cout << "[PASS] Unit tests" << "\n";
 }
