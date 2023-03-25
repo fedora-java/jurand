@@ -1,6 +1,6 @@
 include rules.mk
 
-.PHONY: force all clean test-compile test manpages
+.PHONY: force all clean test-compile test coverage manpages
 
 all: $(call Executable_file,jurand)
 
@@ -11,6 +11,13 @@ test-compile: $(call Executable_file,jurand) $(call Executable_file,jurand_test)
 
 test: test.sh test-compile
 	@./$<
+
+coverage: CXXFLAGS += --coverage -fno-elide-constructors -fno-default-inline
+coverage: LDFLAGS += --coverage
+coverage: test
+	@lcov --output-file target/coverage.info --directory target/object_files --capture --exclude '/usr/include/*'
+	@mkdir -p target/coverage
+	@genhtml -o target/coverage target/coverage.info
 
 CXXFLAGS += -g -std=c++2a -Isrc -Wall -Wextra -Wpedantic
 
