@@ -50,6 +50,11 @@ if ./target/bin/jurand -i; then
 	exit 1
 fi
 
+if ./target/bin/jurand -i -n 'D'; then
+	echo "fail: should have failed"
+	exit 1
+fi
+
 if ./target/bin/jurand -n; then
 	echo "fail: should have failed"
 	exit 1
@@ -74,6 +79,27 @@ if [ "$(echo "import A;" | ./target/bin/jurand -n "B")" != "import A;" ]; then
 	echo "fail: output should be identical to input"
 	exit 1
 fi
+
+{
+	cp "test_resources/Simple.java" "target/test_resources/Simple.java"
+	
+	if ! ./target/bin/jurand -a -n 'D' "target/test_resources/Simple.java" | grep "target/test_resources/Simple.java"; then
+		echo "fail: should have printed the file name"
+		exit 1
+	fi
+	
+	rm -f "target/test_resources/Simple.java"
+}
+{
+	cp -r "test_resources/directory/resources" -t "target/test_resources"
+	
+	if ./target/bin/jurand -i -n 'D' "target/test_resources/resources"; then
+		echo "fail: should have failed"
+		exit 1
+	fi
+	
+	rm -rf "target/test_resources/resources"
+}
 
 ################################################################################
 # Tests for actual matching and removal
@@ -127,6 +153,8 @@ run_tool "Termination.3.java" -a -n "C" || :
 run_tool "Termination.4.java" -a -n "C" || :
 run_tool "Termination.5.java" -a -n "C" || :
 run_tool "Termination.6.java" -a -n "C" || :
+run_tool "Termination.7.java" -a -n "C" || :
+run_tool "Termination.8.java" -a -n "C" || :
 
 ################################################################################
 # Tests of directory traversal
@@ -139,6 +167,9 @@ done
 ################################################################################
 # Tests of strict mode
 
+# Succesful for coverage
+test_file "Simple.java" "Simple.1.java" -a -s -n "D"
+
 # Nothing was matched/removed
 test_strict "Strict.1.java" "Strict.1.java" -p "z"
 test_strict "Strict.1.java" "Strict.1.java" -n "z"
@@ -149,6 +180,27 @@ test_strict "Strict.2.java" "Strict.2.java" -a -p "a"
 test_strict "Strict.2.java" "Strict.2.java" -a -n "C"
 # Should print the directory name
 run_tool "directory" -a -s -n "XXX" | grep "strict mode:.*/directory" 1>/dev/null
+
+################################################################################
+# I/O errors
+
+# Read error
+cp -r "test_resources/Simple.java" "target/test_resources/Simple.java"
+chmod a-r "target/test_resources/Simple.java"
+if ./target/bin/jurand -i "target/test_resources/Simple.java" -a -s -n "D"; then
+	echo "fail: should have failed"
+	exit 1
+fi
+rm -f "target/test_resources/Simple.java"
+
+# Write error
+cp -r "test_resources/Simple.java" "target/test_resources/Simple.java"
+chmod a-w "target/test_resources/Simple.java"
+if ./target/bin/jurand -i "target/test_resources/Simple.java" -a -s -n "D"; then
+	echo "fail: should have failed"
+	exit 1
+fi
+rm -f "target/test_resources/Simple.java"
 
 ################################################################################
 
