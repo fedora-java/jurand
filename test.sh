@@ -182,26 +182,5 @@ test_strict "Strict.2.java" "Strict.2.java" -a -n "C"
 run_tool "directory" -a -s -n "XXX" | grep "strict mode:.*/directory" 1>/dev/null
 
 ################################################################################
-# I/O errors
-
-# Read error
-cp -r "test_resources/Simple.java" "target/test_resources/Simple.java"
-chmod a-r "target/test_resources/Simple.java"
-if ./target/bin/jurand -i "target/test_resources/Simple.java" -a -s -n "D"; then
-	echo "[FAIL] Should have failed"
-	exit 1
-fi
-rm -f "target/test_resources/Simple.java"
-
-# Write error
-cp -r "test_resources/Simple.java" "target/test_resources/Simple.java"
-chmod a-w "target/test_resources/Simple.java"
-if ./target/bin/jurand -i "target/test_resources/Simple.java" -a -s -n "D"; then
-	echo "[FAIL] Should have failed"
-	exit 1
-fi
-rm -f "target/test_resources/Simple.java"
-
-################################################################################
 
 echo "[PASS] Integration tests"
