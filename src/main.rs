@@ -1,7 +1,8 @@
 mod java_symbols;
+use crate::java_symbols::*;
+
 #[cfg(test)]
 mod java_symbols_test;
-use crate::java_symbols::*;
 
 fn main() -> std::process::ExitCode
 {
@@ -13,8 +14,8 @@ fn main() -> std::process::ExitCode
 	
 	if parameter_dict.is_empty()
 	{
-		println!("{}",
-"Usage: jurand [optional flags] <matcher>... [file path]...
+		print!("{}", &"
+Usage: jurand [optional flags] <matcher>... [file path]...
     Matcher:
         -n <name>
                 simple (not fully-qualified) class name
@@ -31,7 +32,7 @@ fn main() -> std::process::ExitCode
 
         -h, --help
                 print help message
-");
+"[1 ..]);
 		return std::process::ExitCode::SUCCESS;
 	}
 	
@@ -90,6 +91,12 @@ fn main() -> std::process::ExitCode
 				}
 			}
 		}
+	}
+	
+	if files.is_empty()
+	{
+		println!("{}", "jurand: no valid input files");
+		return std::process::ExitCode::from(1);
 	}
 	
 	if parameters.strict_mode
