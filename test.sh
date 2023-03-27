@@ -2,6 +2,8 @@
 
 set -e
 
+jurand_bin=${jurand_bin:-./target/debug/jurand}
+
 rm -rf target/test_resources
 mkdir -p target/test_resources
 
@@ -9,7 +11,7 @@ run_tool()
 {
 	local filename="${1}"; shift
 	cp -r "test_resources/${filename}" "target/test_resources/${filename}"
-	./target/debug/jurand -i "target/test_resources/${filename}" "${@}"
+	${jurand_bin} -i "target/test_resources/${filename}" "${@}"
 }
 
 test_file()
@@ -32,47 +34,47 @@ test_strict()
 ################################################################################
 # Tests for simple invocations and return codes
 
-if ! ./target/debug/jurand | grep 'Usage:'; then
+if ! ${jurand_bin} | grep 'Usage:'; then
 	echo "[FAIL] Usage string not printed"
 	exit 1
 fi
 
-if ! ./target/debug/jurand -h | grep 'Usage:'; then
+if ! ${jurand_bin} -h | grep 'Usage:'; then
 	echo "[FAIL] Usage string not printed"
 	exit 1
 fi
 
-if ./target/debug/jurand -i; then
+if ${jurand_bin} -i; then
 	echo "[FAIL] Should have failed"
 	exit 1
 fi
 
-if ./target/debug/jurand -i -n 'D'; then
+if ${jurand_bin} -i -n 'D'; then
 	echo "[FAIL] Should have failed"
 	exit 1
 fi
 
-if ./target/debug/jurand -n; then
+if ${jurand_bin} -n; then
 	echo "[FAIL] Should have failed"
 	exit 1
 fi
 
-if ./target/debug/jurand -p; then
+if ${jurand_bin} -p; then
 	echo "[FAIL] Should have failed"
 	exit 1
 fi
 
-if ./target/debug/jurand nonexisting_file -n "A"; then
+if ${jurand_bin} nonexisting_file -n "A"; then
 	echo "[FAIL] Should have failed"
 	exit 1
 fi
 
-if [ -n "$(echo "import A;" | ./target/debug/jurand -n "A")" ]; then
+if [ -n "$(echo "import A;" | ${jurand_bin} -n "A")" ]; then
 	echo "[FAIL] Output should be empty"
 	exit 1
 fi
 
-if [ "$(echo "import A;" | ./target/debug/jurand -n "B")" != "import A;" ]; then
+if [ "$(echo "import A;" | ${jurand_bin} -n "B")" != "import A;" ]; then
 	echo "[FAIL] Output should be identical to input"
 	exit 1
 fi
@@ -80,7 +82,7 @@ fi
 {
 	cp "test_resources/Simple.java" "target/test_resources/Simple.java"
 	
-	if ! ./target/debug/jurand -a -n 'D' "target/test_resources/Simple.java" | grep "target/test_resources/Simple.java"; then
+	if ! ${jurand_bin} -a -n 'D' "target/test_resources/Simple.java" | grep "target/test_resources/Simple.java"; then
 		echo "[FAIL] Should have printed the file name"
 		exit 1
 	fi
@@ -90,7 +92,7 @@ fi
 {
 	cp -r "test_resources/directory/resources" -t "target/test_resources"
 	
-	if ./target/debug/jurand -i -n 'D' "target/test_resources/resources"; then
+	if ${jurand_bin} -i -n 'D' "target/test_resources/resources"; then
 		echo "[FAIL] Should have failed"
 		exit 1
 	fi
