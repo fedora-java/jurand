@@ -8,16 +8,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: registry.access.redhat.com/ubi8:latest
+    container: quay.io/centos/centos:stream8
     env:
       CXX: g++
-      CXXFLAGS: -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG -pthread # -fsanitize=address,undefined
-      LDFLAGS: -pthread # -fsanitize=address,undefined
+      CXXFLAGS: -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG -pthread -fsanitize=address,undefined
+      LDFLAGS: -pthread -fsanitize=address,undefined
     steps:
       - name: Checkout git repository
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: dnf -y install diffutils gcc-toolset-12-gcc-c++ make # libasan libubsan
+        run: dnf -y install diffutils gcc-toolset-12-gcc-c++ gcc-toolset-12-libasan-devel gcc-toolset-12-libubsan-devel make
       - name: Compile
         run: |
           source /opt/rh/gcc-toolset-12/enable
