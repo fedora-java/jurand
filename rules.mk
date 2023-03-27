@@ -26,17 +26,11 @@ target/manpages/$(1).7: target/manpages/$(1).xml
 manpages += target/manpages/$(1).7
 endef
 
-define Dependency_file_rule # source_file
-$(call Dependency_file,$(1)): src/$(1)
-	@mkdir -p $$(dir $$@)
-	$$(CXX) $$(CXXFLAGS) -MM -MG -MMD -MP -MF $$@ -MT $(call Object_file,$(1)) -o /dev/null $$<
-endef
-
 define Object_file_rule # source_file
-$(call Dependency_file_rule,$(1))
-$(call Object_file,$(1)): $(call Dependency_file,$(1)) target/compile_flags
+$(call Object_file,$(1)): src/$(1) target/compile_flags
 	@mkdir -p $$(dir $$@)
-	$$(CXX) $$(CXXFLAGS) -MMD -MP -MF $$< -MT $$@ -c -o $$@ $(addprefix src/,$(1))
+	@mkdir -p 'target/dependencies'
+	$$(CXX) $$(CXXFLAGS) -MMD -MP -MF $(call Dependency_file,$(1)) -MT $$@ -c -o $$@ $(addprefix src/,$(1))
 endef
 
 define Executable_file_rule # executable_name, source_file, object_files...
