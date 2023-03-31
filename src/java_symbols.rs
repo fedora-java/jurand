@@ -42,7 +42,7 @@ pub fn ignore_whitespace_comments(content: &[u8], mut position: usize) -> usize
 				{
 					return content.len();
 				}
-				else if &content[position .. position + 2] == b"*/"
+				else if &content[position ..][.. 2] == b"*/"
 				{
 					position += 2;
 					break;
@@ -88,7 +88,7 @@ pub fn next_symbol(content: &[u8], mut position: usize) -> (&[u8], usize)
 		}
 	}
 	
-	return (&content[position .. position + symbol_length], position + symbol_length);
+	return (&content[position ..][.. symbol_length], position + symbol_length);
 }
 
 pub fn find_token(content: &[u8], token: &str, mut position: usize, alphanumeric: bool, mut stack: usize) -> usize
