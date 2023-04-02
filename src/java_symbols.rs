@@ -431,7 +431,8 @@ fn handle_content(content: &[u8], parameters: &Parameters) -> std::vec::Vec<u8>
 	return new_content;
 }
 
-pub fn handle_file(path: &std::ffi::OsStr, origin: &std::ffi::OsStr, parameters: &Parameters) -> std::io::Result<std::vec::Vec<u8>>
+pub fn handle_file(path: &std::ffi::OsStr, origin: &std::ffi::OsStr, parameters: &Parameters)
+-> std::io::Result<std::vec::Vec<u8>>
 {
 	let mut original_content = std::vec::Vec::<u8>::new();
 	
@@ -475,7 +476,8 @@ pub fn handle_file(path: &std::ffi::OsStr, origin: &std::ffi::OsStr, parameters:
 
 type ParameterDict<'args> = std::collections::BTreeMap<&'args std::ffi::OsStr, std::vec::Vec<&'args std::ffi::OsStr>>;
 
-pub fn parse_arguments<'args>(args: &[&'args std::ffi::OsStr], no_argument_flags: &std::collections::BTreeSet<&std::ffi::OsStr>) -> ParameterDict<'args>
+pub fn parse_arguments<'args>(args: &[&'args std::ffi::OsStr], no_argument_flags: &std::collections::BTreeSet<&std::ffi::OsStr>)
+-> ParameterDict<'args>
 {
 	let mut result = std::collections::BTreeMap::<&std::ffi::OsStr, std::vec::Vec<&std::ffi::OsStr>>::new();
 	
