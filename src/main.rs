@@ -6,8 +6,8 @@ mod java_symbols_test;
 
 fn main() -> std::process::ExitCode
 {
-	let args : std::vec::Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
-	let args_view : std::vec::Vec<&std::ffi::OsStr> = args.iter().map(|arg| arg.as_os_str()).collect();
+	let args: std::vec::Vec<std::ffi::OsString> = std::env::args_os().skip(1).collect();
+	let args_view: std::vec::Vec<&std::ffi::OsStr> = args.iter().map(|arg| arg.as_os_str()).collect();
 	let parameter_dict = parse_arguments(args_view.as_slice(), &std::collections::BTreeSet::from([
 		"-a", "-i", "--in-place", "-s", "--strict",
 	].map(std::ffi::OsStr::new)));
@@ -103,10 +103,10 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	{
 		STRICT_MODE.set(StrictMode
 		{
-			any_annotation_removed : std::sync::atomic::AtomicBool::new(false),
-			patterns_matched : std::sync::Mutex::new(parameters.patterns.iter().map(|p| (p.to_string(), false)).collect()),
-			names_matched : std::sync::Mutex::new(parameters.names.iter().map(|n| (n.to_owned(), false)).collect()),
-			files_truncated : std::sync::Mutex::new(files.iter().map(|(_, origin)| (origin.to_os_string(), false)).collect()),
+			any_annotation_removed: std::sync::atomic::AtomicBool::new(false),
+			patterns_matched: std::sync::Mutex::new(parameters.patterns.iter().map(|p| (p.to_string(), false)).collect()),
+			names_matched: std::sync::Mutex::new(parameters.names.iter().map(|n| (n.to_owned(), false)).collect()),
+			files_truncated: std::sync::Mutex::new(files.iter().map(|(_, origin)| (origin.to_os_string(), false)).collect()),
 		}).unwrap();
 	}
 	

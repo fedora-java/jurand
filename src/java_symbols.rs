@@ -208,23 +208,23 @@ pub fn next_annotation(content: &[u8], mut position: usize) -> (&[u8], std::vec:
 
 pub struct Parameters
 {
-	pub patterns : std::vec::Vec<regex::bytes::Regex>,
-	pub names : std::collections::BTreeSet<std::vec::Vec<u8>>,
-	pub also_remove_annotations : bool,
-	pub in_place : bool,
-	pub strict_mode : bool,
+	pub patterns: std::vec::Vec<regex::bytes::Regex>,
+	pub names: std::collections::BTreeSet<std::vec::Vec<u8>>,
+	pub also_remove_annotations: bool,
+	pub in_place: bool,
+	pub strict_mode: bool,
 }
 
 #[derive(Debug)]
 pub struct StrictMode
 {
-	pub any_annotation_removed : std::sync::atomic::AtomicBool,
-	pub patterns_matched : std::sync::Mutex<std::collections::BTreeMap<String, bool>>,
-	pub names_matched : std::sync::Mutex<std::collections::BTreeMap<std::vec::Vec<u8>, bool>>,
-	pub files_truncated : std::sync::Mutex<std::collections::BTreeMap<std::ffi::OsString, bool>>,
+	pub any_annotation_removed: std::sync::atomic::AtomicBool,
+	pub patterns_matched: std::sync::Mutex<std::collections::BTreeMap<String, bool>>,
+	pub names_matched: std::sync::Mutex<std::collections::BTreeMap<std::vec::Vec<u8>, bool>>,
+	pub files_truncated: std::sync::Mutex<std::collections::BTreeMap<std::ffi::OsString, bool>>,
 }
 
-pub static STRICT_MODE : once_cell::sync::OnceCell<StrictMode> = once_cell::sync::OnceCell::new();
+pub static STRICT_MODE: once_cell::sync::OnceCell<StrictMode> = once_cell::sync::OnceCell::new();
 
 fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
 	names: &std::collections::BTreeSet<std::vec::Vec<u8>>,
@@ -272,7 +272,7 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex],
 	let mut result = (std::vec::Vec::<u8>::new(), std::collections::BTreeMap::<std::vec::Vec<u8>, std::vec::Vec<u8>>::new());
 	let (ref mut new_content, ref mut removed_classes) = result;
 	new_content.reserve(content.len());
-	let mut position : usize = 0;
+	let mut position: usize = 0;
 	
 	while position < content.len()
 	{
@@ -373,7 +373,7 @@ pub fn remove_annotations(content: &[u8], patterns: &[regex::bytes::Regex],
 	imported_names: &std::collections::BTreeMap<std::vec::Vec<u8>, std::vec::Vec<u8>>)
 -> std::vec::Vec<u8>
 {
-	let mut position : usize = 0;
+	let mut position: usize = 0;
 	let mut result = std::vec::Vec::<u8>::new();
 	result.reserve(content.len());
 	
@@ -474,10 +474,10 @@ pub fn handle_file(path: &std::ffi::OsStr, origin: &std::ffi::OsStr, parameters:
 	return Ok(content);
 }
 
-type ParameterDict<'args> = std::collections::BTreeMap<&'args std::ffi::OsStr, std::vec::Vec<&'args std::ffi::OsStr>>;
+type ParameterDict<'t> = std::collections::BTreeMap<&'t std::ffi::OsStr, std::vec::Vec<&'t std::ffi::OsStr>>;
 
-pub fn parse_arguments<'args>(args: &[&'args std::ffi::OsStr], no_argument_flags: &std::collections::BTreeSet<&std::ffi::OsStr>)
--> ParameterDict<'args>
+pub fn parse_arguments<'t>(args: &[&'t std::ffi::OsStr], no_argument_flags: &std::collections::BTreeSet<&std::ffi::OsStr>)
+-> ParameterDict<'t>
 {
 	let mut result = std::collections::BTreeMap::<&std::ffi::OsStr, std::vec::Vec<&std::ffi::OsStr>>::new();
 	
@@ -527,11 +527,11 @@ pub fn interpret_args(parameters: &ParameterDict) -> Parameters
 {
 	let mut result = Parameters
 	{
-		patterns : std::vec::Vec::<regex::bytes::Regex>::new(),
-		names : std::collections::BTreeSet::new(),
-		also_remove_annotations : false,
-		in_place : false,
-		strict_mode : false,
+		patterns: std::vec::Vec::<regex::bytes::Regex>::new(),
+		names: std::collections::BTreeSet::new(),
+		also_remove_annotations: false,
+		in_place: false,
+		strict_mode: false,
 	};
 	
 	if let Some(patterns) = parameters.get(std::ffi::OsStr::new("-p"))
