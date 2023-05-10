@@ -1,8 +1,4 @@
-mod java_symbols;
-use crate::java_symbols::*;
-
-#[cfg(test)]
-mod java_symbols_test;
+use jurand::java_symbols::*;
 
 fn main() -> std::process::ExitCode
 {
