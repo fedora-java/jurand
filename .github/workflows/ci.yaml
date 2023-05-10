@@ -1,9 +1,9 @@
 name: Continuous Integration
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
   workflow_dispatch:
 jobs:
   build:
@@ -17,7 +17,9 @@ jobs:
       - name: Checkout git repository
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: dnf -y install diffutils gcc-toolset-12-gcc-c++ gcc-toolset-12-libasan-devel gcc-toolset-12-libubsan-devel make
+        run: dnf -y install diffutils gcc-toolset-12-gcc-c++ gcc-toolset-12-libasan-devel gcc-toolset-12-libubsan-devel make asciidoc xmlto
+      - name: Build manpages
+        run: make -j8 manpages
       - name: Compile
         run: |
           source /opt/rh/gcc-toolset-12/enable
