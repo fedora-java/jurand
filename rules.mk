@@ -13,7 +13,7 @@ $(1): force | target
 	@echo '$(2)' | cmp -s - $$@ || echo '$(2)' > $$@
 endef
 
-target/manpages/%.xml: manpages/%.txt | target/manpages
+target/manpages/%.xml: manpages/%.adoc | target/manpages
 	asciidoc -b docbook -d manpage -o $@ $<
 
 target/manpages/%.7: target/manpages/%.xml | target/manpages
