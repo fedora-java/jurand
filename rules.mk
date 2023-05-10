@@ -1,41 +1,33 @@
-define Dependency_file
-$(addprefix target/dependencies/,$(addsuffix .mk,$(subst /,.,$(basename $(1)))))
-endef
+MAKEFLAGS += -r
 
-define Object_file
-$(addprefix target/object_files/,$(addsuffix .o,$(subst /,.,$(basename $(1)))))
-endef
+Dependency_file = $(addprefix target/dependencies/,$(addsuffix .mk,$(subst /,.,$(basename $(1)))))
+Object_file = $(addprefix target/object_files/,$(addsuffix .o,$(subst /,.,$(basename $(1)))))
+Executable_file = $(addprefix target/bin/,$(addsuffix ,$(subst /,.,$(basename $(1)))))
+Manpage_7 = $(addprefix target/manpages/,$(addsuffix .7,$(1)))
 
-define Executable_file
-$(addprefix target/bin/,$(addsuffix ,$(subst /,.,$(basename $(1)))))
-endef
+target target/object_files target/dependencies target/bin target/coverage target/manpages:
+	@mkdir -p $@
 
 define Variable_rule # target_file, string_value
-$(1): force
-	@mkdir -p $$(dir $$@)
+$(1): force | target
 	@echo '$(2)' | cmp -s - $$@ || echo '$(2)' > $$@
 endef
 
-define Manpage_rule # source_file
-target/manpages/$(1).xml: manpages/$(1).txt
-	@mkdir -p $$(dir $$@)
-	asciidoc -b docbook -d manpage -o $$@ $$<
+target/manpages/%.xml: manpages/%.txt | target/manpages
+	asciidoc -b docbook -d manpage -o $@ $<
 
-target/manpages/$(1).7: target/manpages/$(1).xml
-	xmlto man --skip-validation -o target/manpages target/manpages/$(1).xml
-manpages += target/manpages/$(1).7
-endef
+target/manpages/%.7: target/manpages/%.xml | target/manpages
+	xmlto man --skip-validation -o target/manpages target/manpages/$(*F).xml
 
-define Object_file_rule # source_file
-$(call Object_file,$(1)): src/$(1) target/compile_flags
-	@mkdir -p $$(dir $$@)
-	@mkdir -p 'target/dependencies'
-	$$(CXX) $$(CXXFLAGS) -MMD -MP -MF $(call Dependency_file,$(1)) -MT $$@ -c -o $$@ $(addprefix src/,$(1))
-endef
+# $(call Object_file,%) $(call Dependency_file,%)&: src/%.cpp target/compile_flags | target/object_files target/dependencies
+$(call Object_file,%): src/%.cpp target/compile_flags | target/object_files target/dependencies
+	$(CXX) $(CXXFLAGS) -MMD -MP -MF $(call Dependency_file,$(<F)) -MT $(call Object_file,$(<F)) -c -o $(call Object_file,$(<F)) $(addprefix src/,$(<F))
 
-define Executable_file_rule # executable_name, source_file, object_files...
-$(call Object_file_rule,$(2))
-$(call Executable_file,$(1)): target/link_flags $(call Object_file,$(2)) $(call Object_file,$(3))
-	@mkdir -p $$(dir $$@)
-	$$(CXX) -o $$@ $$(LDFLAGS) $$(wordlist 2,$$(words $$^),$$^) $$(LDLIBS)
-endef
+$(call Executable_file,%): target/link_flags | target/bin
+	$(CXX) -o $@ $(LDFLAGS) $(wordlist 2,$(words $^),$^) $(LDLIBS)
+
+coverage: CXXFLAGS += --coverage -fno-elide-constructors -fno-default-inline
+coverage: LDFLAGS += --coverage
+coverage: test | target/coverage
+	@lcov --output-file target/coverage.info --directory target/object_files --capture --exclude '/usr/include/*'
+	@genhtml -o target/coverage target/coverage.info
