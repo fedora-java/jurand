@@ -1,26 +1,18 @@
-java_remove_annotations(7)
-==========================
+= java_remove_annotations(7)
 :doctype:       manpage
 :man source:    JURAND
 :man manual:    Jurand
 
-NAME
-----
+== NAME
 java_remove_annotations - remove imports and annotations from Java source files
 
-SYNOPSIS
---------
+== SYNOPSIS
 *%java_remove_annotations* [optional flags] <matcher>... [file path]...
 
-DESCRIPTION
------------
-This macro removes import statements as well as usage of annotations from Java
-source files. The does the same as *java_remove_imports* and on top of that
-finds all uses of annotations and matches the content between the '@' symbol and
-either ending with whitespace or with an opening parethesis '('.
+== DESCRIPTION
+This macro removes import statements as well as usage of annotations from Java source files. The does the same as *java_remove_imports* and on top of that finds all uses of annotations and matches the content between the '@' symbol and either ending with whitespace or with an opening parethesis '('.
 
-In case of match, the script also removes the block of paretheses that follows
-the matched annotation, if it is present.
+In case of match, the script also removes the block of paretheses that follows the matched annotation, if it is present.
 
 File path arguments are handled the following way:
 
@@ -33,21 +25,17 @@ Arguments can be specified in arbitrary order.
 Matcher is one of:
 
 *-n <name>*::
-Simple class name to be matched against the simple names of imported symbols.
-Names are matched for exact equality. Can be specified multiple times.
+Simple class name to be matched against the simple names of imported symbols. Names are matched for exact equality. Can be specified multiple times.
 
 *-p <pattern>*::
-Regex patterns to be matched against imported symbols. Each imported symbol
-found in the code is matched against each pattern. Can be specified multiple
-times.
+Regex patterns to be matched against imported symbols. Each imported symbol found in the code is matched against each pattern. Can be specified multiple times.
 
 Optional flags:
 
 *-s, --strict*::
 Fail if any of the user provided arguments were redundant.
 
-EXAMPLES
---------
+== EXAMPLES
 Example of usage:
 
 *%java_remove_annotations src -n Nullable*
@@ -78,15 +66,11 @@ Examples of patterns:
     Pattern '@SuppressWarnings' does not match anything.
     Pattern 'EI_EXPOSE_REP' does not match anything.
 
-AUTHOR
-------
+== REPORTING BUGS
+Bugs should be reported through the issue tracker at GitHub: https://github.com/fedora-java/jurand/issues.
+
+== AUTHOR
 Written by Marián Konček.
 
-REPORTING BUGS
---------------
-Bugs should be reported through the issue tracker at
-GitHub: https://github.com/fedora-java/jurand/issues.
-
-SEE ALSO
---------
+== SEE ALSO
 *java_remove_imports*(7).
