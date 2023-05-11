@@ -1,21 +1,16 @@
 include rules.mk
 
 .PHONY: force all clean test-compile test coverage manpages
+.DEFAULT_GOAL = all
+
+CXXFLAGS += -g -std=c++2a -Isrc -Wall -Wextra -Wpedantic
 
 all: $(call Executable_file,jurand)
-
-clean:
-	@rm -rfv target
 
 test-compile: $(call Executable_file,jurand) $(call Executable_file,jurand_test)
 
 test: test.sh test-compile
 	@./$<
-
-CXXFLAGS += -g -std=c++2a -Isrc -Wall -Wextra -Wpedantic
-
-$(eval $(call Variable_rule,target/compile_flags,$(CXX) $(CXXFLAGS)))
-$(eval $(call Variable_rule,target/link_flags,$(CXX) $(LDFLAGS) $(LDLIBS)))
 
 $(call Executable_file,jurand): $(call Object_file,jurand.cpp)
 $(call Executable_file,jurand_test): $(call Object_file,jurand_test.cpp)

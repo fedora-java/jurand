@@ -5,6 +5,9 @@ Object_file = $(addprefix target/object_files/,$(addsuffix .o,$(subst /,.,$(base
 Executable_file = $(addprefix target/bin/,$(addsuffix ,$(subst /,.,$(basename $(1)))))
 Manpage_7 = $(addprefix target/manpages/,$(addsuffix .7,$(1)))
 
+clean:
+	@rm -rfv target
+
 target target/object_files target/dependencies target/bin target/coverage target/manpages:
 	@mkdir -p $@
 
@@ -12,6 +15,9 @@ define Variable_rule # target_file, string_value
 $(1): force | target
 	@echo '$(2)' | cmp -s - $$@ || echo '$(2)' > $$@
 endef
+
+$(eval $(call Variable_rule,target/compile_flags,$$(CXX) $$(CXXFLAGS)))
+$(eval $(call Variable_rule,target/link_flags,$$(CXX) $$(LDFLAGS) $$(LDLIBS)))
 
 target/manpages/%.xml: manpages/%.adoc | target/manpages
 	asciidoc -b docbook -d manpage -o $@ $<
