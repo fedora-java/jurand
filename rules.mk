@@ -19,11 +19,8 @@ endef
 $(eval $(call Variable_rule,target/compile_flags,$$(CXX) $$(CXXFLAGS)))
 $(eval $(call Variable_rule,target/link_flags,$$(CXX) $$(LDFLAGS) $$(LDLIBS)))
 
-target/manpages/%.xml: manpages/%.adoc | target/manpages
-	asciidoc -b docbook -d manpage -o $@ $<
-
-target/manpages/%.7: target/manpages/%.xml | target/manpages
-	xmlto man --skip-validation -o target/manpages target/manpages/$(*F).xml
+target/manpages/%.7: manpages/%.adoc
+	asciidoctor -b manpage -D target/manpages $<
 
 # $(call Object_file,%) $(call Dependency_file,%)&: src/%.cpp target/compile_flags | target/object_files target/dependencies
 $(call Object_file,%): src/%.cpp target/compile_flags | target/object_files target/dependencies
