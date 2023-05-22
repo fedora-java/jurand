@@ -453,8 +453,7 @@ pub fn handle_file(path: &std::ffi::OsStr, origin: &std::ffi::OsStr, parameters:
 		
 		if ! path.is_empty()
 		{
-			ostream.write(os_str_bytes::RawOsStr::new(path).as_raw_bytes())?;
-			ostream.write(b":\n")?;
+			writeln!(ostream, "{}:", std::path::Path::new(path).display())?;
 		}
 		
 		ostream.write(content.as_slice())?;
@@ -464,9 +463,7 @@ pub fn handle_file(path: &std::ffi::OsStr, origin: &std::ffi::OsStr, parameters:
 	{
 		std::fs::OpenOptions::new().write(true).truncate(true).open(&path)?.write(content.as_slice())?;
 		let mut ostream = std::io::stdout().lock();
-		ostream.write(b"Removing symbols from file ")?;
-		ostream.write(os_str_bytes::RawOsStr::new(path).as_raw_bytes())?;
-		ostream.write(b"\n")?;
+		writeln!(ostream, "Removing symbols from file {}", std::path::Path::new(path).display())?;
 		
 		STRICT_MODE.get().map(|s| *s.files_truncated.lock().unwrap().get_mut(origin).unwrap() = true);
 	}
@@ -474,20 +471,20 @@ pub fn handle_file(path: &std::ffi::OsStr, origin: &std::ffi::OsStr, parameters:
 	return Ok(content);
 }
 
-type ParameterDict<'t> = std::collections::BTreeMap<&'t std::ffi::OsStr, std::vec::Vec<&'t std::ffi::OsStr>>;
+type ParameterDict<'t> = std::collections::BTreeMap<&'t str, std::vec::Vec<&'t std::ffi::OsStr>>;
 
-pub fn parse_arguments<'t>(args: &[&'t std::ffi::OsStr], no_argument_flags: &std::collections::BTreeSet<&std::ffi::OsStr>)
+pub fn parse_arguments<'t>(args: &[&'t std::ffi::OsStr], no_argument_flags: &std::collections::BTreeSet<&str>)
 -> ParameterDict<'t>
 {
-	let mut result = std::collections::BTreeMap::<&std::ffi::OsStr, std::vec::Vec<&std::ffi::OsStr>>::new();
+	let mut result = ParameterDict::<'t>::new();
 	
 	if args.is_empty()
 	{
 		return result;
 	}
 	
-	result.insert(std::ffi::OsStr::new(""), std::vec::Vec::new());
-	let mut last_flag = std::ffi::OsStr::new("");
+	let mut last_flag = "";
+	result.insert(last_flag, std::vec::Vec::new());
 	
 	for &arg in args
 	{
@@ -496,28 +493,38 @@ pub fn parse_arguments<'t>(args: &[&'t std::ffi::OsStr], no_argument_flags: &std
 			result.clear();
 			return result;
 		}
-		else if arg.len() >= 2 && os_str_bytes::RawOsStr::new(arg).starts_with('-')
-			&& (os_str_bytes::RawOsStr::new(arg).as_raw_bytes()[1].is_ascii_alphanumeric() || os_str_bytes::RawOsStr::new(arg).as_raw_bytes()[1] == b'-')
+		else if let Some(arg) = arg.to_str()
 		{
-			let insert_result = result.get(arg);
+			let mut chars = arg.chars();
 			
-			if insert_result.is_none()
+			if chars.next() == Some('-')
 			{
-				result.insert(arg, std::vec::Vec::new());
-			}
-			
-			last_flag = arg;
-			
-			if no_argument_flags.contains(arg)
-			{
-				last_flag = std::ffi::OsStr::new("");
+				if let Some(next) = chars.next()
+				{
+					if next == '-' || next.is_ascii_alphabetic()
+					{
+						let insert_result = result.get(arg);
+						
+						if insert_result.is_none()
+						{
+							result.insert(arg, std::vec::Vec::new());
+						}
+						
+						last_flag = arg;
+						
+						if no_argument_flags.contains(arg)
+						{
+							last_flag = "";
+						}
+						
+						continue;
+					}
+				}
 			}
 		}
-		else
-		{
-			result.get_mut(last_flag).unwrap().push(arg);
-			last_flag = std::ffi::OsStr::new("");
-		}
+		
+		result.get_mut(last_flag).unwrap().push(arg);
+		last_flag = "";
 	}
 	
 	return result;
@@ -534,7 +541,7 @@ pub fn interpret_args(parameters: &ParameterDict) -> Parameters
 		strict_mode: false,
 	};
 	
-	if let Some(patterns) = parameters.get(std::ffi::OsStr::new("-p"))
+	if let Some(patterns) = parameters.get("-p")
 	{
 		result.patterns.reserve(patterns.capacity());
 		
@@ -544,7 +551,7 @@ pub fn interpret_args(parameters: &ParameterDict) -> Parameters
 		}
 	}
 	
-	if let Some(names) = parameters.get(std::ffi::OsStr::new("-n"))
+	if let Some(names) = parameters.get("-n")
 	{
 		for &name in names
 		{
@@ -552,16 +559,16 @@ pub fn interpret_args(parameters: &ParameterDict) -> Parameters
 		}
 	}
 	
-	if parameters.get(std::ffi::OsStr::new("-a")).is_some()
+	if parameters.get("-a").is_some()
 	{
 		result.also_remove_annotations = true;
 	}
 	
-	if parameters.get(std::ffi::OsStr::new("-i")).is_some() || parameters.get(std::ffi::OsStr::new("--in-place")).is_some()
+	if parameters.get("-i").is_some() || parameters.get("--in-place").is_some()
 	{
 		result.in_place = true;
 		
-		if parameters.get(std::ffi::OsStr::new("-s")).is_some() || parameters.get(std::ffi::OsStr::new("--strict")).is_some()
+		if parameters.get("-s").is_some() || parameters.get("--strict").is_some()
 		{
 			result.strict_mode = true;
 		}

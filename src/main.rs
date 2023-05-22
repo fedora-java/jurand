@@ -6,7 +6,7 @@ fn main() -> std::process::ExitCode
 	let args_view: std::vec::Vec<&std::ffi::OsStr> = args.iter().map(|arg| arg.as_os_str()).collect();
 	let parameter_dict = parse_arguments(args_view.as_slice(), &std::collections::BTreeSet::from([
 		"-a", "-i", "--in-place", "-s", "--strict",
-	].map(std::ffi::OsStr::new)));
+	]));
 	
 	if parameter_dict.is_empty()
 	{
@@ -40,7 +40,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		return std::process::ExitCode::from(1);
 	}
 	
-	let fileroots = parameter_dict.get(std::ffi::OsStr::new("")).unwrap();
+	let fileroots = parameter_dict.get("").unwrap();
 	
 	if fileroots.is_empty()
 	{
@@ -80,7 +80,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 					let entry = entry.path();
 					
 					if entry.is_file() && ! entry.is_symlink()
-						&& os_str_bytes::RawOsStr::new(entry.as_os_str()).ends_with(".java")
+						&& entry.extension().unwrap_or_default() == "java"
 					{
 						files.push((entry.as_os_str().to_owned(), fileroot.to_os_string()));
 					}
