@@ -10,7 +10,7 @@ fn main() -> std::process::ExitCode
 	
 	if parameter_dict.is_empty()
 	{
-		print!("{}", &"
+		print!("\
 Usage: jurand [optional flags] <matcher>... [file path]...
     Matcher:
         -n <name>
@@ -28,7 +28,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 
         -h, --help
                 print help message
-"[1 ..]);
+");
 		return std::process::ExitCode::SUCCESS;
 	}
 	
@@ -55,7 +55,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		return std::process::ExitCode::SUCCESS;
 	}
 	
-	let mut files = std::vec::Vec::<(std::ffi::OsString, std::ffi::OsString)>::new();
+	let mut files = std::vec::Vec::<(std::path::PathBuf, std::path::PathBuf)>::new();
 	
 	for &fileroot in fileroots
 	{
@@ -69,7 +69,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		
 		if path.is_file() && ! path.is_symlink()
 		{
-			files.push((path.as_os_str().to_owned(), fileroot.to_os_string()));
+			files.push((path.to_path_buf(), std::path::Path::new(fileroot).to_path_buf()));
 		}
 		else if path.is_dir()
 		{
@@ -82,7 +82,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 					if entry.is_file() && ! entry.is_symlink()
 						&& entry.extension().unwrap_or_default() == "java"
 					{
-						files.push((entry.as_os_str().to_owned(), fileroot.to_os_string()));
+						files.push((entry.to_path_buf(), std::path::Path::new(fileroot).to_path_buf()));
 					}
 				}
 			}
@@ -102,7 +102,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 			any_annotation_removed: std::sync::atomic::AtomicBool::new(false),
 			patterns_matched: std::sync::Mutex::new(parameters.patterns.iter().map(|p| (p.to_string(), false)).collect()),
 			names_matched: std::sync::Mutex::new(parameters.names.iter().map(|n| (n.to_owned(), false)).collect()),
-			files_truncated: std::sync::Mutex::new(files.iter().map(|(_, origin)| (origin.to_os_string(), false)).collect()),
+			files_truncated: std::sync::Mutex::new(files.iter().map(|(_, origin)| (origin.clone(), false)).collect()),
 		}).unwrap();
 	}
 	
@@ -112,7 +112,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	
 	struct Context
 	{
-		files: std::vec::Vec::<(std::ffi::OsString, std::ffi::OsString)>,
+		files: std::vec::Vec::<(std::path::PathBuf, std::path::PathBuf)>,
 		parameters: Parameters,
 		files_count: std::sync::atomic::AtomicUsize,
 	}
@@ -152,7 +152,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	{
 		for (path, _) in strict.files_truncated.lock().unwrap().iter().filter(|(_, &b)| ! b)
 		{
-			println!("jurand: strict mode: no changes were made in {}", path.to_str().unwrap());
+			println!("jurand: strict mode: no changes were made in {}", path.display());
 			exit_code = std::process::ExitCode::from(3);
 		}
 		

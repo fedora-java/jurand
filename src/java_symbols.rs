@@ -1,6 +1,63 @@
 use std::io::Write;
 use std::io::Read;
 
+/// NOTE
+/// \u000a -- '\n'
+/// \u002a -- '*'
+/// \u002e -- '.'
+/// \u002f -- '/'
+/// \u0040 -- '@'
+/// \u005c -- '\'
+
+pub fn next_char(mut content: &[u8]) -> (u8, usize)
+{
+	assert!(!content.is_empty());
+	
+	if content.starts_with(b"\\u00") && content.len() >= 6
+	{
+		let content = &content[4 ..];
+		
+		let mut shift = 4;
+		let mut result = 0;
+		
+		for i in 0 .. 2
+		{
+			let mut character = content[i];
+			
+			if b'0' <= character && character <= b'9'
+			{
+				character -= b'0';
+			}
+			else if b'a' <= character && character <= b'f'
+			{
+				character -= b'a';
+				character += 10;
+			}
+			else
+			{
+				// TODO
+				break;
+			}
+			
+			character <<= shift;
+			result += character;
+			shift -= 4;
+		}
+		
+		content = content.substr(2);
+	}
+	
+	
+	
+	if (result == -1)
+	{
+		result = content.front();
+		content = content.substr(1);
+	}
+	
+	return result;
+}
+
 pub fn ignore_whitespace_comments(content: &[u8], mut position: usize) -> usize
 {
 	while position != content.len()
@@ -221,7 +278,7 @@ pub struct StrictMode
 	pub any_annotation_removed: std::sync::atomic::AtomicBool,
 	pub patterns_matched: std::sync::Mutex<std::collections::BTreeMap<String, bool>>,
 	pub names_matched: std::sync::Mutex<std::collections::BTreeMap<String, bool>>,
-	pub files_truncated: std::sync::Mutex<std::collections::BTreeMap<std::ffi::OsString, bool>>,
+	pub files_truncated: std::sync::Mutex<std::collections::BTreeMap<std::path::PathBuf, bool>>,
 }
 
 pub static STRICT_MODE: once_cell::sync::OnceCell<StrictMode> = once_cell::sync::OnceCell::new();
@@ -464,7 +521,7 @@ pub fn handle_file(path: &std::ffi::OsStr, origin: &std::ffi::OsStr, parameters:
 		let mut ostream = std::io::stdout().lock();
 		writeln!(ostream, "Removing symbols from file {}", std::path::Path::new(path).display())?;
 		
-		STRICT_MODE.get().map(|s| *s.files_truncated.lock().unwrap().get_mut(origin).unwrap() = true);
+		STRICT_MODE.get().map(|s| *s.files_truncated.lock().unwrap().get_mut(std::path::Path::new(origin)).unwrap() = true);
 	}
 	
 	return Ok(content);

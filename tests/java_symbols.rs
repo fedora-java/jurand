@@ -1,6 +1,15 @@
 use jurand::java_symbols::*;
 
 #[test]
+fn test_next_char()
+{
+	assert_eq!((b'@', 1), next_char(b"@"));
+	assert_eq!((b'\n', 1), next_char(b"\n"));
+	assert_eq!((b'@', 6), next_char(b"\\u0040"));
+	assert_eq!((b'\n', 6), next_char(b"\\u000a"));
+}
+
+#[test]
 fn test_ignore_whitespace_comments()
 {
 	assert_eq!(0, ignore_whitespace_comments(b"a", 0));
@@ -86,7 +95,7 @@ fn test_next_annotation()
 	{
 		let (annotation, annotation_name) = next_annotation(expression.as_bytes(), 0);
 		assert_eq!(expected_annotation.as_bytes(), annotation);
-		assert_eq!(expected_annotation_name.as_bytes(), annotation_name);
+		assert_eq!(expected_annotation_name, annotation_name);
 	}
 	
 	assert_eq("@A", "A", "@A");
@@ -130,7 +139,7 @@ import static java.util.*;
 import static java.lang.String.valueOf;
 import com.google.common.util.concurrent.Service;
 ",
-	remove_imports(original_content, &[regex::bytes::Regex::new("Runnable").unwrap()],
+	remove_imports(original_content, &[regex::Regex::new("Runnable").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
@@ -140,7 +149,7 @@ import java.util.List;
 import static java.lang.String.valueOf;
 import com.google.common.util.concurrent.Service;
 ",
-	remove_imports(original_content, &[regex::bytes::Regex::new("[*]").unwrap()],
+	remove_imports(original_content, &[regex::Regex::new("[*]").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
@@ -149,7 +158,7 @@ import java.lang.Runnable;
 import static java.lang.String.valueOf;
 import com.google.common.util.concurrent.Service;
 ",
-	remove_imports(original_content, &[regex::bytes::Regex::new("java[.]util").unwrap()],
+	remove_imports(original_content, &[regex::Regex::new("java[.]util").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
@@ -157,70 +166,70 @@ import com.google.common.util.concurrent.Service;
 import java.lang.Runnable;
 import static java.lang.String.valueOf;
 ",
-	remove_imports(original_content, &[regex::bytes::Regex::new("util").unwrap()],
+	remove_imports(original_content, &[regex::Regex::new("util").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
 	assert_eq!(b"
 import com.google.common.util.concurrent.Service;
 ",
-	remove_imports(original_content, &[regex::bytes::Regex::new("java").unwrap()],
+	remove_imports(original_content, &[regex::Regex::new("java").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(original_content, remove_imports(original_content, &[regex::bytes::Regex::new("static").unwrap()],
+	assert_eq!(original_content, remove_imports(original_content, &[regex::Regex::new("static").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"", remove_imports(b"import A ;", &[regex::bytes::Regex::new("A").unwrap()],
+	assert_eq!(b"", remove_imports(b"import A ;", &[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b" ", remove_imports(b"import A ; ", &[regex::bytes::Regex::new("A").unwrap()],
+	assert_eq!(b" ", remove_imports(b"import A ; ", &[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"", remove_imports(b"import/**/A;", &[regex::bytes::Regex::new("A").unwrap()],
+	assert_eq!(b"", remove_imports(b"import/**/A;", &[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"/**/", remove_imports(b"import/**/A/**/;/**/", &[regex::bytes::Regex::new("A").unwrap()],
+	assert_eq!(b"/**/", remove_imports(b"import/**/A/**/;/**/", &[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"", remove_imports(b"import//\nA;", &[regex::bytes::Regex::new("A").unwrap()],
+	assert_eq!(b"", remove_imports(b"import//\nA;", &[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"", remove_imports(b"import A./*B;*/C;", &[regex::bytes::Regex::new("A[.]C").unwrap()],
+	assert_eq!(b"", remove_imports(b"import A./*B;*/C;", &[regex::Regex::new("A[.]C").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"", remove_imports(b"import static A;", &[regex::bytes::Regex::new("A").unwrap()],
+	assert_eq!(b"", remove_imports(b"import static A;", &[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"", remove_imports(b"import static a . b /**/ . A;", &[regex::bytes::Regex::new("A").unwrap()],
+	assert_eq!(b"", remove_imports(b"import static a . b /**/ . A;", &[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"", remove_imports(b"import xstatic .A;", &[regex::bytes::Regex::new("static").unwrap()],
+	assert_eq!(b"", remove_imports(b"import xstatic .A;", &[regex::Regex::new("static").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"", remove_imports(b"import staticx.A;", &[regex::bytes::Regex::new("static").unwrap()],
+	assert_eq!(b"", remove_imports(b"import staticx.A;", &[regex::Regex::new("static").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"", remove_imports(b"import static/**/A;", &[regex::bytes::Regex::new("A").unwrap()],
+	assert_eq!(b"", remove_imports(b"import static/**/A;", &[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"", remove_imports(b"import/**/static/**/A;", &[regex::bytes::Regex::new("A").unwrap()],
+	assert_eq!(b"", remove_imports(b"import/**/static/**/A;", &[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 	
-	assert_eq!(b"import/* A */B;", remove_imports(b"import/* A */B;", &[regex::bytes::Regex::new("A").unwrap()],
+	assert_eq!(b"import/* A */B;", remove_imports(b"import/* A */B;", &[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new()).0.as_slice()
 	);
 }
@@ -230,13 +239,13 @@ fn test_remove_annotations()
 {
 	assert_eq!(b"new Object[initialCapacity];", remove_annotations(
 		b"new @Nullable Object[initialCapacity];",
-		&[regex::bytes::Regex::new("Nullable").unwrap()],
+		&[regex::Regex::new("Nullable").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
 	assert_eq!(b"//)", remove_annotations(
 		b"@A(value = /* ) */ \")\")//)",
-		&[regex::bytes::Regex::new("A").unwrap()],
+		&[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
@@ -244,7 +253,7 @@ fn test_remove_annotations()
 		b"
 @A
 class C {}",
-		&[regex::bytes::Regex::new("A").unwrap()],
+		&[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
@@ -252,32 +261,32 @@ class C {}",
 		b"
 	@A
 	class C {}",
-		&[regex::bytes::Regex::new("A").unwrap()],
+		&[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
 	assert_eq!(b"@a/*A*/.B", remove_annotations(b"@a/*A*/.B",
-		&[regex::bytes::Regex::new("A").unwrap()],
+		&[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
 	assert_eq!(b"", remove_annotations(b"@a/*A*/.B",
-		&[regex::bytes::Regex::new("B").unwrap()],
+		&[regex::Regex::new("B").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
 	assert_eq!(b"", remove_annotations(b"@ A",
-		&[regex::bytes::Regex::new("A").unwrap()],
+		&[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
 	assert_eq!(b"", remove_annotations(b"@//\nA",
-		&[regex::bytes::Regex::new("A").unwrap()],
+		&[regex::Regex::new("A").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
 	assert_eq!(b"@A/*(B)*/", remove_annotations(b"@A/*(B)*/",
-		&[regex::bytes::Regex::new("B").unwrap()],
+		&[regex::Regex::new("B").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
@@ -292,14 +301,14 @@ class C {}",
 @SuppressFBWarnings(value = {\"EI_EXPOSE_REP\", \"EI_EXPOSE_REP2\"})
 @org.junit.Test
 @org.junit.jupiter.api.Test
-", remove_annotations(original_content, &[regex::bytes::Regex::new("SuppressWarnings").unwrap()],
+", remove_annotations(original_content, &[regex::Regex::new("SuppressWarnings").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
 	assert_eq!(b"
 @org.junit.Test
 @org.junit.jupiter.api.Test
-", remove_annotations(original_content, &[regex::bytes::Regex::new("Suppress").unwrap()],
+", remove_annotations(original_content, &[regex::Regex::new("Suppress").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
@@ -307,7 +316,7 @@ class C {}",
 @SuppressWarnings
 @SuppressFBWarnings(value = {\"EI_EXPOSE_REP\", \"EI_EXPOSE_REP2\"})
 @org.junit.jupiter.api.Test
-", remove_annotations(original_content, &[regex::bytes::Regex::new("org[.]junit[.]Test").unwrap()],
+", remove_annotations(original_content, &[regex::Regex::new("org[.]junit[.]Test").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 	
@@ -315,7 +324,7 @@ class C {}",
 @SuppressWarnings
 @SuppressFBWarnings(value = {\"EI_EXPOSE_REP\", \"EI_EXPOSE_REP2\"})
 
-", remove_annotations(original_content, &[regex::bytes::Regex::new("Test").unwrap()],
+", remove_annotations(original_content, &[regex::Regex::new("Test").unwrap()],
 		&std::collections::BTreeSet::new(), &std::collections::BTreeMap::new()).as_slice()
 	);
 }
