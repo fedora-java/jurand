@@ -162,9 +162,9 @@ pub fn find_token(content: &[u8], token: &str, mut position: usize, alphanumeric
 	return content.len();
 }
 
-pub fn next_annotation(content: &[u8], mut position: usize) -> (&[u8], std::vec::Vec<u8>)
+pub fn next_annotation(content: &[u8], mut position: usize) -> (&[u8], String)
 {
-	let mut result = std::vec::Vec::<u8>::new();
+	let mut result = String::new();
 	let mut end_pos = content.len();
 	position = find_token(content, "@", position, false, 0);
 	let mut expecting_dot = false;
@@ -196,7 +196,7 @@ pub fn next_annotation(content: &[u8], mut position: usize) -> (&[u8], std::vec:
 				break;
 			}
 			
-			result.extend_from_slice(symbol);
+			result.push_str(std::str::from_utf8(symbol).unwrap());
 			expecting_dot = ! expecting_dot;
 			end_pos = new_end_pos;
 			(symbol, new_end_pos) = next_symbol(content, new_end_pos);
@@ -208,8 +208,8 @@ pub fn next_annotation(content: &[u8], mut position: usize) -> (&[u8], std::vec:
 
 pub struct Parameters
 {
-	pub patterns: std::vec::Vec<regex::bytes::Regex>,
-	pub names: std::collections::BTreeSet<std::vec::Vec<u8>>,
+	pub patterns: std::vec::Vec<regex::Regex>,
+	pub names: std::collections::BTreeSet<String>,
 	pub also_remove_annotations: bool,
 	pub in_place: bool,
 	pub strict_mode: bool,
@@ -220,19 +220,19 @@ pub struct StrictMode
 {
 	pub any_annotation_removed: std::sync::atomic::AtomicBool,
 	pub patterns_matched: std::sync::Mutex<std::collections::BTreeMap<String, bool>>,
-	pub names_matched: std::sync::Mutex<std::collections::BTreeMap<std::vec::Vec<u8>, bool>>,
+	pub names_matched: std::sync::Mutex<std::collections::BTreeMap<String, bool>>,
 	pub files_truncated: std::sync::Mutex<std::collections::BTreeMap<std::ffi::OsString, bool>>,
 }
 
 pub static STRICT_MODE: once_cell::sync::OnceCell<StrictMode> = once_cell::sync::OnceCell::new();
 
-fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
-	names: &std::collections::BTreeSet<std::vec::Vec<u8>>,
-	imported_names: &std::collections::BTreeMap<std::vec::Vec<u8>, std::vec::Vec<u8>>) -> bool
+fn name_matches(name: &str, patterns: &[regex::Regex],
+	names: &std::collections::BTreeSet<String>,
+	imported_names: &std::collections::BTreeMap<String, String>) -> bool
 {
 	let mut simple_name = name;
 	
-	if let Some(pos) = name.iter().rposition(|&b| b == b'.')
+	if let Some(pos) = name.rfind('.')
 	{
 		simple_name = &name[pos + 1 ..];
 	}
@@ -265,11 +265,11 @@ fn name_matches(name: &[u8], patterns: &[regex::bytes::Regex],
 	return false;
 }
 
-pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex],
-	names: &std::collections::BTreeSet<std::vec::Vec<u8>>)
--> (std::vec::Vec<u8>, std::collections::BTreeMap<std::vec::Vec<u8>, std::vec::Vec<u8>>)
+pub fn remove_imports(content: &[u8], patterns: &[regex::Regex],
+	names: &std::collections::BTreeSet<String>)
+-> (std::vec::Vec<u8>, std::collections::BTreeMap<String, String>)
 {
-	let mut result = (std::vec::Vec::<u8>::new(), std::collections::BTreeMap::<std::vec::Vec<u8>, std::vec::Vec<u8>>::new());
+	let mut result = (std::vec::Vec::<u8>::new(), std::collections::BTreeMap::<String, String>::new());
 	let (ref mut new_content, ref mut removed_classes) = result;
 	new_content.reserve(content.len());
 	let mut position: usize = 0;
@@ -281,7 +281,7 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex],
 		
 		if next_position < content.len()
 		{
-			let mut import_name = std::vec::Vec::<u8>::new();
+			let mut import_name = String::new();
 			let (mut symbol, mut end_pos) = next_symbol(content, next_position + 6);
 			
 			let empty_set = std::collections::BTreeSet::new();
@@ -306,7 +306,7 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex],
 					return result;
 				}
 				
-				import_name.extend_from_slice(symbol);
+				import_name.push_str(std::str::from_utf8(symbol).unwrap());
 				(symbol, end_pos) = next_symbol(content, end_pos);
 			}
 			
@@ -329,13 +329,13 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex],
 			copy_end = end_pos;
 			
 			let empty_map = std::collections::BTreeMap::new();
-			let mut matches = name_matches(import_name.as_slice(), patterns, names_passed, &empty_map);
+			let mut matches = name_matches(&import_name, patterns, names_passed, &empty_map);
 			
 			if is_static
 			{
-				if let Some(pos) = import_name.iter().rposition(|&b| b == b'.')
+				if let Some(pos) = import_name.rfind('.')
 				{
-					let import_nonstatic_name = &import_name.as_slice()[.. pos];
+					let import_nonstatic_name = &import_name[.. pos];
 					matches = matches || name_matches(import_nonstatic_name, patterns, names, &empty_map);
 				}
 			}
@@ -344,17 +344,16 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex],
 			{
 				copy_end = next_position;
 				
-				let mut simple_import_name = std::vec::Vec::new();
 				
-				if let Some(pos) = import_name.iter().rposition(|&b| b == b'.')
+				if let Some(pos) = import_name.rfind('.')
 				{
-					simple_import_name.extend_from_slice(&import_name.as_slice()[pos + 1 ..]);
-				}
-				
-				// Add only non-star and non-static imports
-				if ! import_name.ends_with(b"*") && ! is_static
-				{
-					removed_classes.insert(simple_import_name, import_name.to_owned());
+					let simple_import_name = &import_name[pos + 1 ..];
+					
+					// Add only non-star and non-static imports
+					if ! import_name.ends_with('*') && ! is_static
+					{
+						removed_classes.insert(simple_import_name.to_string(), import_name.to_owned());
+					}
 				}
 			}
 			
@@ -368,9 +367,9 @@ pub fn remove_imports(content: &[u8], patterns: &[regex::bytes::Regex],
 	return result;
 }
 
-pub fn remove_annotations(content: &[u8], patterns: &[regex::bytes::Regex],
-	names: &std::collections::BTreeSet<std::vec::Vec<u8>>,
-	imported_names: &std::collections::BTreeMap<std::vec::Vec<u8>, std::vec::Vec<u8>>)
+pub fn remove_annotations(content: &[u8], patterns: &[regex::Regex],
+	names: &std::collections::BTreeSet<String>,
+	imported_names: &std::collections::BTreeMap<String, String>)
 -> std::vec::Vec<u8>
 {
 	let mut position: usize = 0;
@@ -379,7 +378,7 @@ pub fn remove_annotations(content: &[u8], patterns: &[regex::bytes::Regex],
 	
 	while position < content.len()
 	{
-		let (ref annotation, annotation_name) = next_annotation(content, position);
+		let (annotation, annotation_name) = next_annotation(content, position);
 		let mut next_position = content.len();
 		let mut copy_end = content.len();
 		
@@ -388,7 +387,7 @@ pub fn remove_annotations(content: &[u8], patterns: &[regex::bytes::Regex],
 			copy_end = annotation.as_ptr() as usize + annotation.len() - content.as_ptr() as usize;
 			next_position = copy_end;
 			
-			if annotation_name.as_slice() != b"interface" && name_matches(&annotation_name, patterns, names, imported_names)
+			if annotation_name != "interface" && name_matches(&annotation_name, patterns, names, imported_names)
 			{
 				copy_end = annotation.as_ptr() as usize - content.as_ptr() as usize;
 				
@@ -534,7 +533,7 @@ pub fn interpret_args(parameters: &ParameterDict) -> Parameters
 {
 	let mut result = Parameters
 	{
-		patterns: std::vec::Vec::<regex::bytes::Regex>::new(),
+		patterns: std::vec::Vec::<regex::Regex>::new(),
 		names: std::collections::BTreeSet::new(),
 		also_remove_annotations: false,
 		in_place: false,
@@ -547,7 +546,7 @@ pub fn interpret_args(parameters: &ParameterDict) -> Parameters
 		
 		for pattern in patterns
 		{
-			result.patterns.push(regex::bytes::Regex::new(pattern.to_str().unwrap()).unwrap());
+			result.patterns.push(regex::Regex::new(pattern.to_str().unwrap()).unwrap());
 		}
 	}
 	
@@ -555,7 +554,7 @@ pub fn interpret_args(parameters: &ParameterDict) -> Parameters
 	{
 		for &name in names
 		{
-			result.names.insert(os_str_bytes::RawOsStr::new(name).as_raw_bytes().to_vec());
+			result.names.insert(name.to_str().unwrap().to_string());
 		}
 	}
 	

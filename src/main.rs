@@ -158,7 +158,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		
 		for (name, _) in strict.names_matched.lock().unwrap().iter().filter(|(_, &b)| ! b)
 		{
-			println!("jurand: strict mode: simple name {} did not match anything", std::str::from_utf8(name.as_slice()).unwrap());
+			println!("jurand: strict mode: simple name {} did not match anything", name);
 			exit_code = std::process::ExitCode::from(3);
 		}
 		
