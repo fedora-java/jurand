@@ -19,9 +19,9 @@ Matcher:::
 Optional flags:::
 `*-a*`:: also remove annotations used in code
 
-`*-i*`, `*--in-place*`:: replace the contents of files
+`*-i, --in-place*`:: replace the contents of files
 
-`*-s*`, `*--strict*`:: (wih -i only) fail if any of the specified options was redundant and no changes associated with the option were made
+`*-s, --strict*`:: (wih -i only) fail if any of the specified options was redundant and no changes associated with the option were made
 
 == Specification
 The tool removes import statements of specified matching class names and if `*-a*` is specified then also removes annotations. Arguments can be specified in arbitrary order.
