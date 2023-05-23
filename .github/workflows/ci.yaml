@@ -17,7 +17,7 @@ jobs:
       - name: Checkout git repository
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: dnf -y install diffutils gcc-toolset-12-gcc-c++ gcc-toolset-12-libasan-devel gcc-toolset-12-libubsan-devel make asciidoc xmlto
+        run: dnf -y install diffutils gcc-toolset-12-gcc-c++ gcc-toolset-12-libasan-devel gcc-toolset-12-libubsan-devel make rubygem-asciidoctor
       - name: Build manpages
         run: make -j8 manpages
       - name: Compile
