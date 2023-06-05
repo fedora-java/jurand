@@ -8,7 +8,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: quay.io/centos/centos:stream8
+    container: quay.io/centos/centos:stream9
     env:
       CXX: g++
       CXXFLAGS: -D_GLIBCXX_ASSERTIONS -D_GLIBCXX_DEBUG -pthread -fsanitize=address,undefined
@@ -17,7 +17,15 @@ jobs:
       - name: Checkout git repository
         uses: actions/checkout@v3
       - name: Install dependencies
-        run: dnf -y install diffutils gcc-toolset-12-gcc-c++ gcc-toolset-12-libasan-devel gcc-toolset-12-libubsan-devel make rubygem-asciidoctor
+        run: |
+          echo "[buildroot]
+          name=CentOS Stream $releasever - Buildroot
+          baseurl=https://kojihub.stream.centos.org/kojifiles/repos/c9s-build/latest/x86_64
+          enabled=1
+          gpgcheck=0
+          repo_gpgcheck=0" >> /etc/yum.repos.d/centos.repo
+
+          dnf -y install diffutils gcc-toolset-12-gcc-c++ gcc-toolset-12-libasan-devel gcc-toolset-12-libubsan-devel make rubygem-asciidoctor
       - name: Build manpages
         run: make -j8 manpages
       - name: Compile
