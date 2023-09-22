@@ -14,9 +14,9 @@ This macro removes import statements from Java source files. The script matches 
 
 File path arguments are handled the following way:
 
-* Symlinks are ignored
-* Regular files are handled regardless of the file name
-* Directories are traversed recursively and all `.java` files are handled
+* Symlinks are ignored.
+* Regular files are handled regardless of the file name.
+* Directories are traversed recursively and all `.java` files are handled.
 
 Arguments can be specified in arbitrary order.
 
@@ -34,7 +34,7 @@ Optional flags:
 Fail if any of the user provided arguments were redundant.
 
 == EXAMPLES
-Example of usage:
+Example of usage in a *.spec* file:
 
 *%java_remove_imports src -n Nullable*
 

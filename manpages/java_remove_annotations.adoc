@@ -10,15 +10,15 @@ java_remove_annotations - remove imports and annotations from Java source files
 *%java_remove_annotations* [optional flags] <matcher>... [file path]...
 
 == DESCRIPTION
-This macro removes import statements as well as usage of annotations from Java source files. The does the same as *java_remove_imports* and on top of that finds all uses of annotations and matches the content between the '@' symbol and either ending with whitespace or with an opening parethesis '('.
+This macro removes import statements as well as usage of annotations from Java source files. The does the same as *java_remove_imports* and on top of that finds all uses of annotations and matches the content between the '@' symbol and either ending with whitespace or with an opening parethesis '(' (the annotation arguments).
 
 In case of match, the script also removes the block of paretheses that follows the matched annotation, if it is present.
 
 File path arguments are handled the following way:
 
-* Symlinks are ignored
-* Regular files are handled regardless of the file name
-* Directories are traversed recursively and all `.java` files are handled
+* Symlinks are ignored.
+* Regular files are handled regardless of the file name.
+* Directories are traversed recursively and all `.java` files are handled.
 
 Arguments can be specified in arbitrary order.
 
@@ -36,7 +36,7 @@ Optional flags:
 Fail if any of the user provided arguments were redundant.
 
 == EXAMPLES
-Example of usage:
+Example of usage in a *.spec* file:
 
 *%java_remove_annotations src -n Nullable*
 
