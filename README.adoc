@@ -11,16 +11,14 @@ Currently the tool is able to remove `import` statements and annotations.
 jurand [optional flags] <matcher>... [file path]...
 ----
 
-Matcher:::
-[horizontal]
-`-n <name>`:: Simple (not fully-qualified) class name.
-`-p <pattern>`:: Regex pattern to match names used in code.
+Matcher::
+`-n <name>`::: Simple (not fully-qualified) class name.
+`-p <pattern>`::: Regex pattern to match names used in code.
 
-Optional flags:::
-[horizontal]
-`-a`:: Also remove annotations used in code.
-`-i`, `--in-place`:: Replace the contents of files.
-`-s`, `--strict`::
+Optional flags::
+`-a`::: Also remove annotations used in code.
+`-i`, `--in-place`::: Replace the contents of files.
+`-s`, `--strict`:::
 Fail if any of the specified options was redundant and no changes associated +
 with the option were made. This option is only applicable together with `-i`.
 
