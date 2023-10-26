@@ -1,15 +1,6 @@
 use jurand::java_symbols::*;
 
 #[test]
-fn test_next_char()
-{
-	assert_eq!((b'@', 1), next_char(b"@"));
-	assert_eq!((b'\n', 1), next_char(b"\n"));
-	assert_eq!((b'@', 6), next_char(b"\\u0040"));
-	assert_eq!((b'\n', 6), next_char(b"\\u000a"));
-}
-
-#[test]
 fn test_ignore_whitespace_comments()
 {
 	assert_eq!(0, ignore_whitespace_comments(b"a", 0));

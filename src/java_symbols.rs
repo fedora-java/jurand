@@ -9,55 +9,6 @@ use std::io::Read;
 /// \u0040 -- '@'
 /// \u005c -- '\'
 
-pub fn next_char(mut content: &[u8]) -> (u8, usize)
-{
-	assert!(!content.is_empty());
-	
-	if content.starts_with(b"\\u00") && content.len() >= 6
-	{
-		let content = &content[4 ..];
-		
-		let mut shift = 4;
-		let mut result = 0;
-		
-		for i in 0 .. 2
-		{
-			let mut character = content[i];
-			
-			if b'0' <= character && character <= b'9'
-			{
-				character -= b'0';
-			}
-			else if b'a' <= character && character <= b'f'
-			{
-				character -= b'a';
-				character += 10;
-			}
-			else
-			{
-				// TODO
-				break;
-			}
-			
-			character <<= shift;
-			result += character;
-			shift -= 4;
-		}
-		
-		content = content.substr(2);
-	}
-	
-	
-	
-	if (result == -1)
-	{
-		result = content.front();
-		content = content.substr(1);
-	}
-	
-	return result;
-}
-
 pub fn ignore_whitespace_comments(content: &[u8], mut position: usize) -> usize
 {
 	while position != content.len()
@@ -281,7 +232,7 @@ pub struct StrictMode
 	pub files_truncated: std::sync::Mutex<std::collections::BTreeMap<std::path::PathBuf, bool>>,
 }
 
-pub static STRICT_MODE: once_cell::sync::OnceCell<StrictMode> = once_cell::sync::OnceCell::new();
+pub static STRICT_MODE: std::sync::OnceLock<StrictMode> = std::sync::OnceLock::new();
 
 fn name_matches(name: &str, patterns: &[regex::Regex],
 	names: &std::collections::BTreeSet<String>,
