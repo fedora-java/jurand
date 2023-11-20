@@ -32,5 +32,5 @@ $(call Executable_file,%): target/link_flags | target/bin
 coverage: CXXFLAGS += --coverage -fno-elide-constructors -fno-default-inline
 coverage: LDFLAGS += --coverage
 coverage: test | target/coverage
-	@lcov --output-file target/coverage.info --directory target/object_files --capture --exclude '/usr/include/*'
-	@genhtml -o target/coverage target/coverage.info
+	lcov --output-file target/coverage.info --directory target/object_files --capture --exclude '/usr/include/*'
+	genhtml -o target/coverage target/coverage.info
