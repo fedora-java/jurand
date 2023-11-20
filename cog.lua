@@ -1,4 +1,5 @@
 cog.shell = {"dash", "-eux", "-c"}
+cog.clean = {"target/object_files"}
 
 CXX = cog.expand(os.getenv("CXX") or "g++")
 CXXFLAGS = cog.expand(os.getenv("CXXFLAGS"))
@@ -21,11 +22,11 @@ local function link(targets, sources) return {
 
 local function object_file(name)
 	local result = "target/object_files/"..name..".o"
-	return cog.rule {{result, cog.c_dependency_file_for(result)}, {"src/"..name..".cpp", cog.c_prerequisites}, compile}
+	return cog.rule(result, cog.c_dependency_file_for(result)):dep("src/"..name..".cpp", cog.c_prerequisites):recipe(compile)
 end
 
-local function executable(name, object_files)
-	return cog.rule {"target/bin/"..name, object_files, link}
+local function executable(name, object_file)
+	return cog.rule("target/bin/"..name):dep(object_file):recipe(link)
 end
 
 local function build_manpage(_, sources) return {
@@ -33,22 +34,22 @@ local function build_manpage(_, sources) return {
 } end
 
 local function manpage(name)
-	return cog.rule {"target/manpages/"..name..".7", "manpages/"..name..".adoc", build_manpage}
+	return cog.rule("target/manpages/"..name..".7"):dep("manpages/"..name..".adoc"):recipe(build_manpage)
 end
 
-cog.rule {"build", {executable("jurand", object_file("jurand")[1])}}
-cog.rule {"test-compile", {executable("jurand_test", object_file("jurand_test")[1])}}
-cog.rule {"test", {"test.sh", "test-compile", "build"}, function(_, sources) return {"./"..sources[1]} end}
-cog.rule {"manpages", {manpage("java_remove_annotations"), manpage("java_remove_imports")}}
-cog.rule {"target/coverage.info", "test", {
+cog.rule("build"):dep(executable("jurand", object_file("jurand")[1]))
+cog.rule("test-compile"):dep(executable("jurand_test", object_file("jurand_test")[1]))
+cog.rule("test", "target/test_resources"):dep("test.sh", "test-compile", "build"):recipe(function(_, sources) return {"./"..sources[1]} end)
+cog.rule("manpages"):dep(manpage("java_remove_annotations"), manpage("java_remove_imports"))
+cog.rule("target/coverage.info"):dep("test"):recipe {
 	"lcov", "--output-file", "target/coverage.info", "--directory", "target/object_files", "--capture", "--exclude", "/usr/include/*",
-}}
-cog.rule {"target/coverage", "target/coverage.info", {
+}
+cog.rule("target/coverage"):dep("target/coverage.info"):recipe {
 	"genhtml", "-o", "target/coverage", "target/coverage.info",
-}}
-cog.rule {"coverage", {"target/coverage"}}
+}
+cog.rule("coverage"):dep("target/coverage")
 
-cog.rule {{"install", "target/installed_files"}, {"build", "manpages"}, [[
+cog.rule("install", "target/installed_files"):dep("build", "manpages"):recipe([[
 	readonly metafile="target/installed_files"
 	
 	install_file()
@@ -68,4 +69,4 @@ cog.rule {{"install", "target/installed_files"}, {"build", "manpages"}, [[
 	install_file 755 "${bindir}" target/bin/jurand
 	install_file 644 "${rpmmacrodir}" macros/macros.jurand
 	install_file 644 "${mandir}" target/manpages/*.7
-]]}
+]])
