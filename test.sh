@@ -143,6 +143,12 @@ test_file "Utf_8.java" "Utf_8.3.java" -a -n "ď"
 
 test_file "Regression5.java" "Regression5.1.java" -a -n Serial
 
+test_file "Array.java" "Array.1.java" -a -n C
+test_file "Array.java" "Array.2.java" -a -n D
+test_file "Array.java" "Array.3.java" -a -n E
+test_file "Array.java" "Array.4.java" -a -n F
+test_file "Array.java" "Array.5.java" -a -n C -n D -n E -n F
+
 ################################################################################
 # Tests for tool termination on invalid sources, result is irrelevant
 
