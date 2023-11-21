@@ -1,4 +1,4 @@
-use jurand::java_symbols::*;
+use jurand::*;
 
 #[test]
 fn test_ignore_whitespace_comments()

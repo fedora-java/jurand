@@ -1,4 +1,4 @@
-use jurand::java_symbols::*;
+use jurand::*;
 
 fn main() -> std::process::ExitCode
 {
