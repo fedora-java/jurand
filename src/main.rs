@@ -106,45 +106,38 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		}).unwrap();
 	}
 	
-	let mut threads = std::vec::Vec::<std::thread::JoinHandle<()>>::with_capacity(
-		std::thread::available_parallelism().unwrap_or(std::num::NonZeroUsize::new(1).unwrap()).into()
-	);
+	let files_count = std::sync::atomic::AtomicUsize::new(0);
 	
-	struct Context
+	std::thread::scope(|scope|
 	{
-		files: std::vec::Vec::<(std::path::PathBuf, std::path::PathBuf)>,
-		parameters: Parameters,
-		files_count: std::sync::atomic::AtomicUsize,
-	}
-	
-	let context = std::sync::Arc::new(Context {files, parameters, files_count: std::sync::atomic::AtomicUsize::new(0)});
-	
-	for _ in 0 .. threads.capacity()
-	{
-		let context = context.clone();
+		let mut threads = Vec::new();
+		threads.reserve(std::thread::available_parallelism().unwrap_or(1.try_into().unwrap()).get());
+		let capacity = threads.capacity();
 		
-		threads.push(std::thread::spawn(move ||
+		let files = &files;
+		let parameters = &parameters;
+		let files_count = &files_count;
+		
+		for _ in 0 .. capacity
 		{
-			loop
+			threads.push(scope.spawn(move ||
 			{
-				let index = context.files_count.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
-				
-				if index >= context.files.len()
+				loop
 				{
-					break;
+					let index = files_count.fetch_add(1, std::sync::atomic::Ordering::AcqRel);
+					
+					if index >= files.len()
+					{
+						break;
+					}
+					
+					let (file, origin) = &files[index];
+					
+					handle_file(file.as_os_str(), origin.as_os_str(), &parameters).unwrap();
 				}
-				
-				let (file, origin) = &context.files[index];
-				
-				handle_file(file.as_os_str(), origin.as_os_str(), &context.parameters).unwrap();
-			}
-		}));
-	}
-	
-	for thread in threads
-	{
-		thread.join().unwrap();
-	}
+			}));
+		}
+	});
 	
 	let mut exit_code = std::process::ExitCode::SUCCESS;
 	
@@ -168,7 +161,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 			exit_code = std::process::ExitCode::from(3);
 		}
 		
-		if context.parameters.also_remove_annotations && ! strict.any_annotation_removed.load(std::sync::atomic::Ordering::Acquire)
+		if parameters.also_remove_annotations && ! strict.any_annotation_removed.load(std::sync::atomic::Ordering::Acquire)
 		{
 			println!("jurand: strict mode: -a was specified but no annotation was removed");
 			exit_code = std::process::ExitCode::from(3);
