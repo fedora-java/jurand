@@ -1,16 +1,34 @@
 cog.shell = {"dash", "-eux", "-c"}
 cog.clean = {"target/object_files"}
 
+local function append(target, source)
+	table.move(source, 1, #source, #target + 1, target)
+end
+
 CXX = cog.expand(os.getenv("CXX") or "g++")
 CXXFLAGS = cog.expand(os.getenv("CXXFLAGS"))
-table.insert(CXXFLAGS, {"-g", "-std=c++2a", "-Isrc", "-Wall", "-Wextra", "-Wpedantic"})
+append(CXXFLAGS, {"-g", "-std=c++2a", "-Isrc", "-Wall", "-Wextra", "-Wpedantic"})
 LDFLAGS = cog.expand(os.getenv("LDFLAGS"))
 LDLIBS = cog.expand(os.getenv("LDLIBS"))
 
 if cog.targets["coverage"] then
-	table.insert(CXXFLAGS, {"--coverage", "-fno-elide-constructors", "-fno-default-inline"})
-	table.insert(LDFLAGS, {"--coverage"})
+	append(CXXFLAGS, {"--coverage", "-fno-elide-constructors", "-fno-default-inline"})
+	append(LDFLAGS, {"--coverage"})
 end
+
+compile_flags_string = CXX[1].." "..table.concat(CXXFLAGS, " ")
+link_flags_string = compile_flags_string.." "..table.concat(LDFLAGS, " ").." "..table.concat(LDLIBS, " ")
+
+local function check_compile_flags(targets)
+	local stream = io.open("target/compile_flags", "rb")
+	if stream then
+		return compile_flags_string == stream:read()
+	end
+end
+
+cog.rule("target/compile_flags"):dep(check_compile_flags):recipe(
+	"echo \""..compile_flags_string.."\" > target/compile_flags"
+)
 
 local function compile(targets, sources) return {
 	CXX, CXXFLAGS, "-MD", "-MP", "-MF", cog.c_dependency_file_for(targets[1]), "-MT", targets[1], "-c", "-o", targets[1], sources[1]
@@ -22,7 +40,8 @@ local function link(targets, sources) return {
 
 local function object_file(name)
 	local result = "target/object_files/"..name..".o"
-	return cog.rule(result, cog.c_dependency_file_for(result)):dep("src/"..name..".cpp", cog.c_prerequisites):recipe(compile)
+	return cog.rule(result, cog.c_dependency_file_for(result))
+	:dep("src/"..name..".cpp", "target/compile_flags", cog.c_prerequisites):recipe(compile)
 end
 
 local function executable(name, object_file)
@@ -48,25 +67,3 @@ cog.rule("target/coverage"):dep("target/coverage.info"):recipe {
 	"genhtml", "-o", "target/coverage", "target/coverage.info",
 }
 cog.rule("coverage"):dep("target/coverage")
-
-cog.rule("install", "target/installed_files"):dep("build", "manpages"):recipe([[
-	readonly metafile="target/installed_files"
-	
-	install_file()
-	{
-		local attr="${1}"; shift
-		local target_dir="${1}"; shift
-		
-		for source_file in "${@}"; do
-			install -m "${attr}" -p -D -t "${buildroot}/${target_dir}" "${source_file}"
-			if [ "${target_dir}" = "${mandir}" ]; then
-				local suffix=".gz"
-			fi
-			echo "${target_dir}/${source_file##*/}${suffix:-}" >> "${metafile}"
-		done
-	}
-	
-	install_file 755 "${bindir}" target/bin/jurand
-	install_file 644 "${rpmmacrodir}" macros/macros.jurand
-	install_file 644 "${mandir}" target/manpages/*.7
-]])
