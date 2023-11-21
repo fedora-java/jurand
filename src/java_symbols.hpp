@@ -337,6 +337,12 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 		
 		while (not symbol.empty())
 		{
+			// catch `@A ...`
+			if (symbol == "." and content.substr(new_end_pos).starts_with(".."))
+			{
+				break;
+			}
+			
 			if (expecting_dot and symbol != ".")
 			{
 				if (symbol == "(")
