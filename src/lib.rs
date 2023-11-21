@@ -185,6 +185,12 @@ pub fn next_annotation(content: &[u8], mut position: usize) -> (&[u8], String)
 		
 		while ! symbol.is_empty()
 		{
+			// catch `@A ...`
+			if symbol == b"." && content[new_end_pos ..].starts_with(b"..")
+			{
+				break;
+			}
+			
 			if expecting_dot && symbol != b"."
 			{
 				if symbol == b"("
