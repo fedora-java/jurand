@@ -150,6 +150,8 @@ test_file "Array.java" "Array.3.java" -a -n E
 test_file "Array.java" "Array.4.java" -a -n F
 test_file "Array.java" "Array.5.java" -a -n C -n D -n E -n F
 
+test_file "Package_info.java" "Package_info.1.java" -a -n MyAnn
+
 ################################################################################
 # Tests for tool termination on invalid sources, result is irrelevant
 
