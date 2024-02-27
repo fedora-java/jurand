@@ -8,11 +8,14 @@ install_file()
 {
 	local attr="${1}"; shift
 	local target_dir="${1}"; shift
+	local suffix
 	
 	for source_file in "${@}"; do
 		install -m "${attr}" -p -D -t "${buildroot}/${target_dir}" "${source_file}"
 		if [ "${target_dir}" = "${mandir}" ]; then
-			local suffix=".gz"
+			suffix=".gz"
+		else
+			suffix=""
 		fi
 		echo "${target_dir}/${source_file##*/}${suffix:-}" >> "${metafile}"
 	done
