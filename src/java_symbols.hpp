@@ -598,10 +598,10 @@ inline std::string handle_content(std::string_view content, const Parameters& pa
 	
 	if (parameters.also_remove_annotations_)
 	{
-		content = new_content;
+		auto size = new_content.size();
 		new_content = remove_annotations(new_content, parameters.patterns_, parameters.names_, removed_classes);
 		
-		if (strict_mode and new_content.size() < content.size())
+		if (strict_mode and new_content.size() < size)
 		{
 			strict_mode->any_annotation_removed_.store(true, std::memory_order_release);
 		}
