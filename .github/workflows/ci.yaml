@@ -18,13 +18,7 @@ jobs:
         uses: actions/checkout@v4
       - name: Install dependencies
         run: |
-          echo "[buildroot]
-          name=CentOS Stream $releasever - Buildroot
-          baseurl=https://kojihub.stream.centos.org/kojifiles/repos/c9s-build/latest/x86_64
-          enabled=1
-          gpgcheck=0
-          repo_gpgcheck=0" >> /etc/yum.repos.d/centos.repo
-
+          dnf -y install epel-release
           dnf -y install diffutils gcc-toolset-12-gcc-c++ gcc-toolset-12-libasan-devel gcc-toolset-12-libubsan-devel make rubygem-asciidoctor
       - name: Build manpages
         run: make -j8 manpages
