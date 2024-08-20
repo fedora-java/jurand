@@ -3,7 +3,7 @@ MAKEFLAGS += -r
 Dependency_file = $(addprefix target/dependencies/,$(addsuffix .mk,$(subst /,.,$(basename $(1)))))
 Object_file = $(addprefix target/object_files/,$(addsuffix .o,$(subst /,.,$(basename $(1)))))
 Executable_file = $(addprefix target/bin/,$(addsuffix ,$(subst /,.,$(basename $(1)))))
-Manpage_7 = $(addprefix target/manpages/,$(addsuffix .7,$(1)))
+Manpage = $(addprefix target/manpages/,$(1))
 
 clean:
 	@rm -rfv target
@@ -19,7 +19,7 @@ endef
 $(eval $(call Variable_rule,target/compile_flags,$$(CXX) $$(CXXFLAGS)))
 $(eval $(call Variable_rule,target/link_flags,$$(CXX) $$(LDFLAGS) $$(LDLIBS)))
 
-target/manpages/%.7: manpages/%.adoc
+target/manpages/%: manpages/%.adoc
 	asciidoctor -b manpage -D target/manpages $<
 
 # $(call Object_file,%) $(call Dependency_file,%)&: src/%.cpp target/compile_flags | target/object_files target/dependencies
