@@ -1,7 +1,7 @@
 = java_remove_imports(7)
-:doctype:       manpage
-:man source:    JURAND
-:man manual:    Jurand
+:doctype: manpage
+:mansource: JAVA_REMOVE_IMPORTS
+:manmanual: Java packaging support
 
 == NAME
 java_remove_imports - remove import statements from Java source files
@@ -10,7 +10,8 @@ java_remove_imports - remove import statements from Java source files
 *%java_remove_imports* [optional flags] <matcher>... [file path]...
 
 == DESCRIPTION
-This macro removes import statements from Java source files. The script matches all non-whitespace content following the 'import [static]' statement against all patterns provided via the *-p* flag and all simple class names against names provided by the *-n* flag.
+This macro removes import statements from Java source files.
+The script matches all non-whitespace content following the 'import [static]' statement against all patterns provided via the *-p* flag and all simple class names against names provided by the *-n* flag.
 
 File path arguments are handled the following way:
 
@@ -23,10 +24,14 @@ Arguments can be specified in arbitrary order.
 Matcher is one of:
 
 *-n <name>*::
-Simple class name to be matched against the simple names of imported symbols. Names are matched for exact equality. Can be specified multiple times.
+Simple class name to be matched against the simple names of imported symbols.
+Names are matched for exact equality.
+Can be specified multiple times.
 
 *-p <pattern>*::
-Regex patterns to be matched against imported symbols. Each imported symbol found in the code is matched against each pattern. Can be specified multiple times.
+Regex patterns to be matched against imported symbols.
+Each imported symbol found in the code is matched against each pattern.
+Can be specified multiple times.
 
 Optional flags:
 
