@@ -16,6 +16,7 @@ $(call Executable_file,jurand): $(call Object_file,jurand.cpp)
 $(call Executable_file,jurand_test): $(call Object_file,jurand_test.cpp)
 
 manpages: \
+	$(call Manpage,jurand.1)\
 	$(call Manpage,java_remove_annotations.7)\
 	$(call Manpage,java_remove_imports.7)\
 
