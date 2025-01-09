@@ -1,0 +1,54 @@
+jurand(1)
+=========
+:doctype: manpage
+:manmanual: Jurand Manual
+:mansource: JURAND
+
+NAME
+----
+jurand - Java removal of annotations.
+
+SYNOPSIS
+--------
+*jurand* [*-n*=_<name>_] [*-p*=_<pattern>_] [*-a*] [*-i*] [*-s*] [_<paths>_...]
+
+DESCRIPTION
+-----------
+A tool for manipulating symbols present in `.java` source files.
+
+The tool can be used for patching `.java` sources in cases where using
+sed is insufficient due to Java language syntax. The tool follows Java
+language rules rather than applying simple regular expressions on the
+source code.
+
+Currently the tool is able to remove `import` statements and
+annotations.
+
+OPTIONS
+-------
+*-n*, *--name*=_<name>_::
+  Simple (not fully-qualified) class name.
+
+*-p*, *--pattern*=_<pattern>_::
+  Regex pattern to match names used in code.
+
+*-a*::
+  Also remove annotations used in code.
+
+*-i*, *--in-place*::
+  Replace the contents of files.
+
+*-s*, *--strict*::
+  Fail if any of the specified options was redundant and no changes
+  associated with the option were made. This option is only applicable
+  together with *-i*.
+
+REPORTING BUGS
+--------------
+Bugs should be reported through the Jurand issue tracker at Github:
+https://github.com/fedora-java/jurand/issues.
+
+SEE ALSO
+--------
+*java_remove_annotations*(7),
+*java_remove_imports*(7).
