@@ -1,8 +1,6 @@
 #include <array>
-#include <mutex>
 #include <thread>
 #include <utility>
-#include <functional>
 #include <atomic>
 
 #include <java_symbols.hpp>
