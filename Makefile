@@ -1,6 +1,6 @@
 include rules.mk
 
-.PHONY: force all clean test-compile test coverage manpages
+.PHONY: force all clean test-compile test coverage manpages test-install clean-install
 .DEFAULT_GOAL = all
 
 CXXFLAGS += -g -std=c++2a -Isrc -Wall -Wextra -Wpedantic
@@ -19,5 +19,15 @@ manpages: \
 	$(call Manpage,jurand.1)\
 	$(call Manpage,java_remove_annotations.7)\
 	$(call Manpage,java_remove_imports.7)\
+
+test-install: export buildroot = target/buildroot
+test-install: export bindir = /usr/bin
+test-install: export rpmmacrodir = /usr/lib/rpm/macros.d
+test-install: export mandir = /usr/share/man
+test-install: all manpages
+	./install.sh
+
+clean-install:
+	@rm -rfv target/buildroot
 
 -include target/dependencies/*.mk
