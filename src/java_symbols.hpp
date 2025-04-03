@@ -21,16 +21,10 @@
 
 #include <iostream>
 
-//! Allows comparison between string and string_view
-struct Transparent_string_cmp : std::less<std::string_view>
-{
-	using is_transparent = void;
-};
+using String_view_set = std::set<std::string_view, std::less<>>;
+using String_map = std::map<std::string, std::string, std::less<>>;
 
-using Transparent_string_view_set = std::set<std::string_view, Transparent_string_cmp>;
-using Transparent_string_map = std::map<std::string, std::string, Transparent_string_cmp>;
-
-using Parameter_dict = std::map<std::string_view, std::vector<std::string_view>, Transparent_string_cmp>;
+using Parameter_dict = std::map<std::string_view, std::vector<std::string_view>, std::less<>>;
 
 struct Named_regex : std::regex
 {
@@ -121,7 +115,7 @@ private:
 struct Parameters
 {
 	std::vector<Named_regex> patterns_;
-	Transparent_string_view_set names_;
+	String_view_set names_;
 	bool also_remove_annotations_ = false;
 	bool in_place_ = false;
 	bool strict_mode_ = false;
@@ -130,8 +124,8 @@ struct Parameters
 struct Strict_mode
 {
 	std::atomic<bool> any_annotation_removed_ = false;
-	Mutex<std::map<std::string_view, bool, Transparent_string_cmp>> patterns_matched_;
-	Mutex<std::map<std::string_view, bool, Transparent_string_cmp>> names_matched_;
+	Mutex<std::map<std::string_view, bool, std::less<>>> patterns_matched_;
+	Mutex<std::map<std::string_view, bool, std::less<>>> names_matched_;
 	Mutex<std::map<std::string_view, bool>> files_truncated_;
 };
 
@@ -386,7 +380,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
  * @return The simple class name.
  */
 inline bool name_matches(std::string_view name, std::span<const Named_regex> patterns,
-	const Transparent_string_view_set& names, const Transparent_string_map& imported_names) noexcept
+	const String_view_set& names, const String_map& imported_names) noexcept
 {
 	auto simple_name = name;
 	
@@ -439,10 +433,10 @@ inline bool name_matches(std::string_view name, std::span<const Named_regex> pat
  * removed simple class names to the fully-qualified name as present in the
  * import statement.
  */
-inline std::tuple<std::string, Transparent_string_map> remove_imports(
-	std::string_view content, std::span<const Named_regex> patterns, const Transparent_string_view_set& names)
+inline std::tuple<std::string, String_map> remove_imports(
+	std::string_view content, std::span<const Named_regex> patterns, const String_view_set& names)
 {
-	auto result = std::tuple<std::string, Transparent_string_map>();
+	auto result = std::tuple<std::string, String_map>();
 	auto& [new_content, removed_classes] = result;
 	new_content.reserve(content.size());
 	auto position = std::ptrdiff_t(0);
@@ -457,7 +451,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
 			auto import_name = std::string();
 			auto [symbol, end_pos] = next_symbol(content, next_position + 6);
 			
-			const auto empty_set = Transparent_string_view_set();
+			const auto empty_set = String_view_set();
 			const auto* names_passed = &names;
 			
 			bool is_static = false;
@@ -548,7 +542,7 @@ inline std::tuple<std::string, Transparent_string_map> remove_imports(
  * @return The resulting string with annotations removed.
  */
 inline std::string remove_annotations(std::string_view content, std::span<const Named_regex> patterns,
-	const Transparent_string_view_set& names, const Transparent_string_map& imported_names)
+	const String_view_set& names, const String_map& imported_names)
 {
 	auto position = std::ptrdiff_t(0);
 	auto result = std::string();
@@ -674,7 +668,7 @@ catch (std::exception& ex)
 
 ////////////////////////////////////////////////////////////////////////////////
 
-inline Parameter_dict parse_arguments(std::span<const char*> args, const Transparent_string_view_set& no_argument_flags)
+inline Parameter_dict parse_arguments(std::span<const char*> args, const String_view_set& no_argument_flags)
 {
 	auto result = Parameter_dict();
 	
