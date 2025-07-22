@@ -220,7 +220,7 @@ inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view
 		}
 	}
 	
-	return std::tuple(content.substr(position, symbol_length), position + symbol_length);
+	return {content.substr(position, symbol_length), position + symbol_length};
 }
 
 /*!
@@ -363,7 +363,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 		}
 	}
 	
-	return std::tuple(content.substr(position, end_pos - position), std::move(result));
+	return {content.substr(position, end_pos - position), std::move(result)};
 }
 
 /*!
@@ -684,7 +684,7 @@ inline Parameter_dict parse_arguments(std::span<const char*> args, const String_
 	{
 		if (arg == "-h" or arg == "--help")
 		{
-			return Parameter_dict();
+			return {};
 		}
 		else if (arg.size() >= 2 and arg[0] == '-' and (std::isalnum(static_cast<unsigned char>(arg[1])) or (arg[1] == '-')))
 		{
