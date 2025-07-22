@@ -70,7 +70,7 @@ struct Path_origin_entry : std::filesystem::path
 	{
 	}
 	
-	std::string_view origin() const noexcept
+	[[nodiscard]] std::string_view origin() const noexcept
 	{
 		return origin_;
 	}
@@ -102,7 +102,7 @@ struct Mutex
 		return Locked(value_, mutex_);
 	}
 	
-	Locked<const Type, std::mutex> lock() const
+	[[nodiscard]] Locked<const Type, std::mutex> lock() const
 	{
 		return Locked(value_, mutex_);
 	}
