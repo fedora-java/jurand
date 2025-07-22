@@ -1,4 +1,3 @@
-#include <array>
 #include <thread>
 #include <utility>
 #include <atomic>
