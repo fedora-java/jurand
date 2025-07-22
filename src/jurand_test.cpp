@@ -5,6 +5,12 @@
 
 using namespace java_symbols;
 
+template <typename T1, typename T2>
+static std::ostream &operator<<(std::ostream &os, const std::tuple<T1, T2> &t)
+{
+	return os << "(" << std::get<0>(t) << ", " << std::get<1>(t) << ")";
+}
+
 static void assert_eq(const auto& expected, const auto& actual)
 {
 	if (expected != actual)
@@ -12,14 +18,6 @@ static void assert_eq(const auto& expected, const auto& actual)
 		auto message = std::stringstream();
 		message << "Test failed: different values: expected: " << expected << ", actual: " << actual;
 		throw std::runtime_error(std::move(message).str());
-	}
-}
-
-static void assert_that(bool value)
-{
-	if (not value)
-	{
-		throw std::runtime_error("Test failed");
 	}
 }
 
@@ -96,28 +94,28 @@ int main()
 	assert_eq(0, find_token("import/", "import", 0, true));
 	assert_eq(0, find_token("import+", "import", 0, true));
 	
-	assert_that(next_annotation_t("@A", "A") == next_annotation("@A"));
-	assert_that(next_annotation_t("@A", "A") == next_annotation("@A\n"));
-	assert_that(next_annotation_t("@A()", "A") == next_annotation("@A()"));
+	assert_eq(next_annotation_t("@A", "A"), next_annotation("@A"));
+	assert_eq(next_annotation_t("@A", "A"), next_annotation("@A\n"));
+	assert_eq(next_annotation_t("@A()", "A"), next_annotation("@A()"));
 	
-	assert_that(next_annotation_t("@A", "A") == next_annotation("@A class B {}"));
+	assert_eq(next_annotation_t("@A", "A"), next_annotation("@A class B {}"));
 	
-	assert_that(next_annotation_t("@A(a = ')')", "A") == next_annotation("@A(a = ')')"));
-	assert_that(next_annotation_t("@A(a = ')')", "A") == next_annotation("@A(a = ')') class B {}"));
+	assert_eq(next_annotation_t("@A(a = ')')", "A"), next_annotation("@A(a = ')')"));
+	assert_eq(next_annotation_t("@A(a = ')')", "A"), next_annotation("@A(a = ')') class B {}"));
 	
-	assert_that(next_annotation_t("@A(a = \")\")", "A") == next_annotation("@A(a = \")\")"));
-	assert_that(next_annotation_t("@A(a = \")))\" /*)))*/)", "A") == next_annotation("@A(a = \")))\" /*)))*/) class B {}"));
-	assert_that(next_annotation_t("@A(/* ) */)", "A") == next_annotation("@A(/* ) */)"));
-	assert_that(next_annotation_t("@A", "A") == next_annotation("method(@A Object o)"));
+	assert_eq(next_annotation_t("@A(a = \")\")", "A"), next_annotation("@A(a = \")\")"));
+	assert_eq(next_annotation_t("@A(a = \")))\" /*)))*/)", "A"), next_annotation("@A(a = \")))\" /*)))*/) class B {}"));
+	assert_eq(next_annotation_t("@A(/* ) */)", "A"), next_annotation("@A(/* ) */)"));
+	assert_eq(next_annotation_t("@A", "A"), next_annotation("method(@A Object o)"));
 	
-	assert_that(next_annotation_t("@A(\nvalue = \")\" /* ) */\n// )\n)", "A") == next_annotation("@A(\nvalue = \")\" /* ) */\n// )\n)\n"));
+	assert_eq(next_annotation_t("@A(\nvalue = \")\" /* ) */\n// )\n)", "A"), next_annotation("@A(\nvalue = \")\" /* ) */\n// )\n)\n"));
 	
-	assert_that(next_annotation_t("@D", "D") == next_annotation(" // @A\n/* @B */\nvalue = \"@C\";\n@D"));
+	assert_eq(next_annotation_t("@D", "D"), next_annotation(" // @A\n/* @B */\nvalue = \"@C\";\n@D"));
 	
-	assert_that(next_annotation_t("@a.b.C", "a.b.C") == next_annotation("@a.b.C"));
-	assert_that(next_annotation_t("@a/**/.B", "a.B") == next_annotation("@a/**/.B"));
+	assert_eq(next_annotation_t("@a.b.C", "a.b.C"), next_annotation("@a.b.C"));
+	assert_eq(next_annotation_t("@a/**/.B", "a.B"), next_annotation("@a/**/.B"));
 	
-	assert_that(next_annotation_t("@A(value = /* ) */ \")\")", "A") == next_annotation("@A(value = /* ) */ \")\")//)"));
+	assert_eq(next_annotation_t("@A(value = /* ) */ \")\")", "A"), next_annotation("@A(value = /* ) */ \")\")//)"));
 	
 	{
 		constexpr std::string_view original_content = R"(
