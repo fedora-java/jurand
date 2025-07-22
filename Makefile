@@ -3,7 +3,7 @@ include rules.mk
 .PHONY: force all clean test-compile test coverage manpages test-install clean-install
 .DEFAULT_GOAL = all
 
-CXXFLAGS += -g -std=c++2a -Isrc -Wall -Wextra -Wpedantic
+CXXFLAGS += -g -std=c++2a -Wall -Wextra -Wpedantic
 
 all: $(call Executable_file,jurand)
 
