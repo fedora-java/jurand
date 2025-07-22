@@ -76,7 +76,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		
 		if (std::filesystem::is_regular_file(to_handle) and not std::filesystem::is_symlink(to_handle))
 		{
-			files.emplace_back(Path_origin_entry(std::move(to_handle), fileroot));
+			files.emplace_back(std::move(to_handle), fileroot);
 		}
 		else if (std::filesystem::is_directory(to_handle))
 		{
@@ -88,7 +88,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 					and not std::filesystem::is_symlink(to_handle)
 					and to_handle.native().ends_with(".java"))
 				{
-					files.emplace_back(Path_origin_entry(std::move(to_handle), fileroot));
+					files.emplace_back(std::move(to_handle), fileroot);
 				}
 			}
 		}
