@@ -29,15 +29,15 @@ int main()
 	
 	using next_annotation_t = std::tuple<std::string_view, std::string>;
 	
-	assert_eq(0, ignore_whitespace_comments("a", 0));
-	assert_eq(1, ignore_whitespace_comments("ab", 1));
-	assert_eq(0, ignore_whitespace_comments("/", 0));
-	assert_eq(0, ignore_whitespace_comments("*", 0));
-	assert_eq(2, ignore_whitespace_comments("//", 0));
-	assert_eq(4, ignore_whitespace_comments("/**/", 0));
-	assert_eq(7, ignore_whitespace_comments("/* a */", 0));
-	assert_eq(5, ignore_whitespace_comments("/**/ a", 0));
-	assert_eq(4, ignore_whitespace_comments("//a\n", 0));
+	assert_eq(0u, ignore_whitespace_comments("a", 0));
+	assert_eq(1u, ignore_whitespace_comments("ab", 1));
+	assert_eq(0u, ignore_whitespace_comments("/", 0));
+	assert_eq(0u, ignore_whitespace_comments("*", 0));
+	assert_eq(2u, ignore_whitespace_comments("//", 0));
+	assert_eq(4u, ignore_whitespace_comments("/**/", 0));
+	assert_eq(7u, ignore_whitespace_comments("/* a */", 0));
+	assert_eq(5u, ignore_whitespace_comments("/**/ a", 0));
+	assert_eq(4u, ignore_whitespace_comments("//a\n", 0));
 	
 	assert_eq("", std::get<0>(next_symbol("")));
 	assert_eq("", std::get<0>(next_symbol(" ")));
@@ -47,54 +47,54 @@ int main()
 	assert_eq("foo", std::get<0>(next_symbol("//\n\nfoo")));
 	assert_eq("foo", std::get<0>(next_symbol("/* */ foo ")));
 	
-	assert_eq(0, find_token("@", "@"));
-	assert_eq(1, find_token(" @", "@"));
-	assert_eq(1, find_token("(@)", "@"));
-	assert_eq(3, find_token("//\n@", "@"));
-	assert_eq(6, find_token("/*\n*/\n@", "@"));
+	assert_eq(0u, find_token("@", "@"));
+	assert_eq(1u, find_token(" @", "@"));
+	assert_eq(1u, find_token("(@)", "@"));
+	assert_eq(3u, find_token("//\n@", "@"));
+	assert_eq(6u, find_token("/*\n*/\n@", "@"));
 	
-	assert_eq(3, find_token("' '@", "@"));
-	assert_eq(4, find_token("'\''@", "@"));
-	assert_eq(8, find_token("'\\uFFFE'@", "@"));
-	assert_eq(4, find_token("\"//\"@", "@"));
-	assert_eq(4, find_token("\"/*\"@", "@"));
+	assert_eq(3u, find_token("' '@", "@"));
+	assert_eq(4u, find_token("'\''@", "@"));
+	assert_eq(8u, find_token("'\\uFFFE'@", "@"));
+	assert_eq(4u, find_token("\"//\"@", "@"));
+	assert_eq(4u, find_token("\"/*\"@", "@"));
 	
-	assert_eq(2, find_token("())", ")"));
-	assert_eq(1, find_token("()", ")", 1));
-	assert_eq(4, find_token("(()))", ")"));
-	assert_eq(3, find_token("'\"'@", "@"));
+	assert_eq(2u, find_token("())", ")"));
+	assert_eq(1u, find_token("()", ")", 1));
+	assert_eq(4u, find_token("(()))", ")"));
+	assert_eq(3u, find_token("'\"'@", "@"));
 	
-	assert_eq(4, find_token("// @", "@"));
-	assert_eq(5, find_token("// @\n", "@"));
+	assert_eq(4u, find_token("// @", "@"));
+	assert_eq(5u, find_token("// @\n", "@"));
 	
-	assert_eq(5, find_token("/*@*/", "@"));
-	assert_eq(7, find_token("/* @ */", "@"));
-	assert_eq(7, find_token("/*\n@ */", "@"));
-	assert_eq(6, find_token("// /*@", "@"));
-	assert_eq(10, find_token("/**//*@ */", "@"));
-	assert_eq(7, find_token("/**///@", "@"));
+	assert_eq(5u, find_token("/*@*/", "@"));
+	assert_eq(7u, find_token("/* @ */", "@"));
+	assert_eq(7u, find_token("/*\n@ */", "@"));
+	assert_eq(6u, find_token("// /*@", "@"));
+	assert_eq(10u, find_token("/**//*@ */", "@"));
+	assert_eq(7u, find_token("/**///@", "@"));
 	
-	assert_eq(3, find_token("'@'", "@"));
-	assert_eq(8, find_token(R"('\uFFFE')", R"(\u)"));
-	assert_eq(4, find_token(R"('\'')", R"(\')"));
-	assert_eq(3, find_token(R"("@")", "@"));
-	assert_eq(5, find_token(R"("""@")", "@"));
-	assert_eq(6, find_token(R"("" "@")", "@"));
-	assert_eq(8, find_token(R"("\\" "@")", "@"));
-	assert_eq(10, find_token(R"("\\\"" "@")", "@"));
+	assert_eq(3u, find_token("'@'", "@"));
+	assert_eq(8u, find_token(R"('\uFFFE')", R"(\u)"));
+	assert_eq(4u, find_token(R"('\'')", R"(\')"));
+	assert_eq(3u, find_token(R"("@")", "@"));
+	assert_eq(5u, find_token(R"("""@")", "@"));
+	assert_eq(6u, find_token(R"("" "@")", "@"));
+	assert_eq(8u, find_token(R"("\\" "@")", "@"));
+	assert_eq(10u, find_token(R"("\\\"" "@")", "@"));
 	
-	assert_eq(2, find_token("()", ")"));
-	assert_eq(4, find_token("(())", ")"));
+	assert_eq(2u, find_token("()", ")"));
+	assert_eq(4u, find_token("(())", ")"));
 	
-	assert_eq(8, find_token("noimport", "import", 0, true));
-	assert_eq(7, find_token("_import", "import", 0, true));
-	assert_eq(1, find_token("/import", "import", 0, true));
-	assert_eq(1, find_token("+import", "import", 0, true));
+	assert_eq(8u, find_token("noimport", "import", 0, true));
+	assert_eq(7u, find_token("_import", "import", 0, true));
+	assert_eq(1u, find_token("/import", "import", 0, true));
+	assert_eq(1u, find_token("+import", "import", 0, true));
 	
-	assert_eq(9, find_token("importnot", "import", 0, true));
-	assert_eq(7, find_token("import_", "import", 0, true));
-	assert_eq(0, find_token("import/", "import", 0, true));
-	assert_eq(0, find_token("import+", "import", 0, true));
+	assert_eq(9u, find_token("importnot", "import", 0, true));
+	assert_eq(7u, find_token("import_", "import", 0, true));
+	assert_eq(0u, find_token("import/", "import", 0, true));
+	assert_eq(0u, find_token("import+", "import", 0, true));
 	
 	assert_that(next_annotation_t("@A", "A") == next_annotation("@A"));
 	assert_that(next_annotation_t("@A", "A") == next_annotation("@A\n"));
