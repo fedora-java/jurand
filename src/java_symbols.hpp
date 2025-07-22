@@ -637,7 +637,7 @@ try
 			osyncstream << path.native() << ":\n";
 		}
 		
-		osyncstream.write(content.c_str(), content.size());
+		osyncstream << content;
 	}
 	else if (content.size() < original_content.size())
 	{
@@ -649,7 +649,7 @@ try
 		}
 		
 		ofs.exceptions(std::ios_base::badbit | std::ios_base::failbit);
-		ofs.write(content.c_str(), content.size());
+		ofs << content;
 		std::osyncstream(std::clog) << "Removing symbols from file " << path.native() << "\n";
 		
 		if (strict_mode)
