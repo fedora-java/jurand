@@ -139,7 +139,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 				
 				try
 				{
-					handle_file(std::move(files[index]), parameters);
+					handle_file(files[index], parameters);
 				}
 				catch (std::exception& ex)
 				{
