@@ -278,11 +278,8 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 			
 			while (position < std::ssize(content) and content[position] != '"')
 			{
-				if (content.substr(position, 2) == "\\\\")
-				{
-					position += 2;
-				}
-				else if (content.substr(position, 2) == "\\\"")
+				if (content.substr(position, 2) == "\\\\"
+					or content.substr(position, 2) == "\\\"")
 				{
 					position += 2;
 				}
