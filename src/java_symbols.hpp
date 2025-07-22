@@ -257,7 +257,7 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 		{
 			return position;
 		}
-		else if (content[position] == '\'')
+		if (content[position] == '\'')
 		{
 			if (content.substr(position, 4) == "'\\''")
 			{
@@ -265,28 +265,15 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 			}
 			else
 			{
-				do
-				{
-					++position;
-				}
-				while (position < std::ssize(content) and content[position] != '\'');
+				while (++position < std::ssize(content) and content[position] != '\'');
 			}
 		}
 		else if (content[position] == '"')
 		{
-			++position;
-			
-			while (position < std::ssize(content) and content[position] != '"')
+			while (++position < std::ssize(content) and content[position] != '"')
 			{
-				if (content.substr(position, 2) == "\\\\")
-				{
-					position += 2;
-				}
-				else if (content.substr(position, 2) == "\\\"")
-				{
-					position += 2;
-				}
-				else
+				auto substring = content.substr(position, 2);
+				if (substring == "\\\\" or substring == "\\\"")
 				{
 					++position;
 				}
