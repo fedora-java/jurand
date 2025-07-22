@@ -3,7 +3,7 @@
 #include <utility>
 #include <atomic>
 
-#include <java_symbols.hpp>
+#include "java_symbols.hpp"
 
 using namespace java_symbols;
 
