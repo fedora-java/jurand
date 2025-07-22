@@ -1,5 +1,4 @@
 -std=c++2a
--Isrc
 -Wall
 -Wextra
 -Wpedantic
