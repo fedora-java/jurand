@@ -194,8 +194,8 @@ inline bool is_identifier_char(char c) noexcept
 
 /*!
  * Iterates over @p content starting at @p position to find the next uncommented
- * symbol. and returns it and an index pointing past it. The symbol is either a
- * sequence of alphanumeric characters or a single non-aphanumeric character or
+ * symbol and returns it and an index pointing past it. The symbol is either a
+ * sequence of alphanumeric characters or a single non-alphanumeric character or
  * an empty string if the end has been reached.
  */
 inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view content, std::ptrdiff_t position = 0) noexcept
@@ -229,7 +229,7 @@ inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view
  * string nor inside a character literal.
  * 
  * Special case when @p token == ')', this function counts opening and closing
- * parentheses and returns the first parethesis outside.
+ * parentheses and returns the first parenthesis outside.
  * 
  * @param alphanumeric If true, considers only tokens that are surrounded by
  * whitespace, comments or are at the boundaries of @p content.
@@ -372,10 +372,10 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
  * @param names A table of names, these are matched exactly by the simple class
  * names.
  * @param imported_names Names that have their import declarations removed. In
- * this case, we match the full name and this will only remove names that are
- * used in their simple form in code (therefore they refer to the removed
- * import declaration. If a name is used in its fully-qualified form in the
- * code, it will be catched by the other matchers.
+ * this case, we match the full name, and this will only remove names that are
+ * used in their simple form in code (therefore, they refer to the removed
+ * import declaration. If a name is used in its fully qualified form in the
+ * code, it will be caught by the other matchers.
  * 
  * @return The simple class name.
  */
@@ -426,11 +426,11 @@ inline bool name_matches(std::string_view name, std::span<const Named_regex> pat
 /*!
  * Iterates over @p content to remove all import statements provided
  * as @p patterns and @p names. Patterns match the string representation
- * following the `import [static]` string. @p names matches only the simple
+ * following the `import [static]` string. @p names match only the simple
  * class names.
  * 
  * @return The resulting string with import statements removed and a map of
- * removed simple class names to the fully-qualified name as present in the
+ * removed simple class names to the fully qualified name as present in the
  * import statement.
  */
 inline std::tuple<std::string, String_map> remove_imports(
@@ -477,7 +477,7 @@ inline std::tuple<std::string, String_map> remove_imports(
 				std::tie(symbol, end_pos) = next_symbol(content, end_pos);
 			}
 			
-			// Skip whitespace until one newline but only if newline is found
+			// Skip whitespace until one newline but only if a newline is found
 			{
 				auto skip_space = end_pos;
 				
@@ -537,7 +537,7 @@ inline std::tuple<std::string, String_map> remove_imports(
 /*!
  * Iterates over @p content to remove all annotations provided as @p patterns
  * and @p names. Patterns match the string representation of the annotations as
- * present in the source code. @p names matches only the simple class names.
+ * present in the source code. @p names match only the simple class names.
  * 
  * @return The resulting string with annotations removed.
  */
