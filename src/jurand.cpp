@@ -161,7 +161,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	if (auto& errors_unlocked = errors.lock().get(); not errors_unlocked.empty())
 	{
 		exit_code = 2;
-		std::cout << "jurand: exceptions occured during the process:\n";
+		std::cout << "jurand: exceptions occurred during the process:\n";
 		
 		for (const auto& error : errors_unlocked)
 		{
