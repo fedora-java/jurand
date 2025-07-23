@@ -95,7 +95,7 @@ template<typename Type>
 struct Mutex
 {
 	
-	Locked<Type, std::mutex> lock()
+	[[nodiscard]] Locked<Type, std::mutex> lock()
 	{
 		return Locked(value_, mutex_);
 	}
