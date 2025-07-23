@@ -141,9 +141,9 @@ namespace java_symbols
  * @return The position of the first non-whitespace non-comment character or the
  * length of the string if none is found.
  */
-inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::ptrdiff_t position) noexcept
+inline std::size_t ignore_whitespace_comments(std::string_view content, std::size_t position) noexcept
 {
-	while (position != std::ssize(content))
+	while (position != std::size(content))
 	{
 		if (std::isspace(static_cast<unsigned char>(content[position])))
 		{
@@ -157,9 +157,9 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::
 		{
 			position = content.find('\n', position + 2);
 			
-			if (position == std::ptrdiff_t(content.npos))
+			if (position == std::size_t(content.npos))
 			{
-				return std::ssize(content);
+				return std::size(content);
 			}
 			
 			++position;
@@ -168,9 +168,9 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::
 		{
 			position = content.find("*/", position + 2);
 			
-			if (position == std::ptrdiff_t(content.npos))
+			if (position == std::size_t(content.npos))
 			{
-				return std::ssize(content);
+				return std::size(content);
 			}
 			
 			position += 2;
@@ -196,21 +196,21 @@ inline bool is_identifier_char(char c) noexcept
  * sequence of alphanumeric characters or a single non-alphanumeric character or
  * an empty string if the end has been reached.
  */
-inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view content, std::ptrdiff_t position = 0) noexcept
+inline std::tuple<std::string_view, std::size_t> next_symbol(std::string_view content, std::size_t position = 0) noexcept
 {
-	auto symbol_length = std::ptrdiff_t(0);
+	auto symbol_length = std::size_t(0);
 	
-	if (position < std::ssize(content))
+	if (position < std::size(content))
 	{
 		position = ignore_whitespace_comments(content, position);
 		
-		if (position < std::ssize(content))
+		if (position < std::size(content))
 		{
 			symbol_length = 1;
 			
 			if (is_identifier_char(content[position]))
 			{
-				while (position + symbol_length != std::ssize(content) and is_identifier_char(content[position + symbol_length]))
+				while (position + symbol_length != std::size(content) and is_identifier_char(content[position + symbol_length]))
 				{
 					++symbol_length;
 				}
@@ -235,14 +235,14 @@ inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view
  * @return The starting index of the token or the length of @p content if not
  * found.
  */
-inline std::ptrdiff_t find_token(std::string_view content, std::string_view token,
-	std::ptrdiff_t position = 0, bool alphanumeric = false, std::ptrdiff_t stack = 0) noexcept
+inline std::size_t find_token(std::string_view content, std::string_view token,
+	std::size_t position = 0, bool alphanumeric = false, std::size_t stack = 0) noexcept
 {
-	while (position + std::ssize(token) <= std::ssize(content))
+	while (position + std::size(token) <= std::size(content))
 	{
 		position = ignore_whitespace_comments(content, position);
 		
-		if (position == std::ssize(content))
+		if (position == std::size(content))
 		{
 			break;
 		}
@@ -251,7 +251,7 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 		
 		if ((token != ")" or stack == 0) and substr == token
 			and not (alphanumeric and ((position > 0 and is_identifier_char(content[position - 1]))
-				or (position + std::ssize(token) < std::ssize(content) and (is_identifier_char(content[position + token.length()]))))))
+				or (position + std::size(token) < std::size(content) and (is_identifier_char(content[position + token.length()]))))))
 		{
 			return position;
 		}
@@ -267,14 +267,14 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 				{
 					++position;
 				}
-				while (position < std::ssize(content) and content[position] != '\'');
+				while (position < std::size(content) and content[position] != '\'');
 			}
 		}
 		else if (content[position] == '"')
 		{
 			++position;
 			
-			while (position < std::ssize(content) and content[position] != '"')
+			while (position < std::size(content) and content[position] != '"')
 			{
 				if (content.substr(position, 2) == "\\\\"
 					or content.substr(position, 2) == "\\\"")
@@ -299,7 +299,7 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 		++position;
 	}
 	
-	return std::ssize(content);
+	return std::size(content);
 }
 
 /*!
@@ -311,14 +311,14 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
  * stripped. If no annotation is found, returns a view pointing past the
  * @p content with length 0 and an empty string.
  */
-inline std::tuple<std::string_view, std::string> next_annotation(std::string_view content, std::ptrdiff_t position = 0)
+inline std::tuple<std::string_view, std::string> next_annotation(std::string_view content, std::size_t position = 0)
 {
 	auto result = std::string();
-	auto end_pos = std::ssize(content);
+	auto end_pos = std::size(content);
 	position = find_token(content, "@", position);
 	bool expecting_dot = false;
 	
-	if (position < std::ssize(content))
+	if (position < std::size(content))
 	{
 		auto symbol = std::string_view();
 		std::tie(symbol, end_pos) = next_symbol(content, position + 1);
@@ -338,7 +338,7 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 				{
 					end_pos = find_token(content, ")", new_end_pos);
 					
-					if (end_pos == std::ssize(content))
+					if (end_pos == std::size(content))
 					{
 						result = std::string();
 						position = end_pos;
@@ -434,14 +434,14 @@ inline std::tuple<std::string, String_map> remove_imports(
 	auto result = std::tuple<std::string, String_map>();
 	auto& [new_content, removed_classes] = result;
 	new_content.reserve(content.size());
-	auto position = std::ptrdiff_t(0);
+	auto position = std::size_t(0);
 	
-	while (position < std::ssize(content))
+	while (position < std::size(content))
 	{
 		auto next_position = find_token(content, "import", position, true);
-		auto copy_end = std::ssize(content);
+		auto copy_end = std::size(content);
 		
-		if (next_position < std::ssize(content))
+		if (next_position < std::size(content))
 		{
 			auto import_name = std::string();
 			auto [symbol, end_pos] = next_symbol(content, next_position + 6);
@@ -476,7 +476,7 @@ inline std::tuple<std::string, String_map> remove_imports(
 			{
 				auto skip_space = end_pos;
 				
-				while (skip_space != std::ssize(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
+				while (skip_space != std::size(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
 				{
 					++skip_space;
 					
@@ -539,15 +539,15 @@ inline std::tuple<std::string, String_map> remove_imports(
 inline std::string remove_annotations(std::string_view content, std::span<const Named_regex> patterns,
 	const String_view_set& names, const String_map& imported_names)
 {
-	auto position = std::ptrdiff_t(0);
+	auto position = std::size_t(0);
 	auto result = std::string();
 	result.reserve(content.size());
 	
-	while (position < std::ssize(content))
+	while (position < std::size(content))
 	{
 		auto [annotation, annotation_name] = next_annotation(content, position);
-		auto next_position = std::ssize(content);
-		auto copy_end = std::ssize(content);
+		auto next_position = std::size(content);
+		auto copy_end = std::size(content);
 		
 		if (annotation.begin() != content.end())
 		{
@@ -560,12 +560,12 @@ inline std::string remove_annotations(std::string_view content, std::span<const 
 				
 				auto skip_space = next_position;
 				
-				while (skip_space != std::ssize(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
+				while (skip_space != std::size(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
 				{
 					++skip_space;
 				}
 				
-				if (skip_space != std::ssize(content))
+				if (skip_space != std::size(content))
 				{
 					next_position = skip_space;
 				}
