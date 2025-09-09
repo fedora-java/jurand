@@ -152,6 +152,9 @@ test_file "Array.java" "Array.5.java" -a -n C -n D -n E -n F
 
 test_file "Package_info.java" "Package_info.1.java" -a -n MyAnn
 
+test_file "Unicode_escapes.java" "Unicode_escapes.1.java" -n "TestAnnotation"
+test_file "Unicode_escapes.java" "Unicode_escapes.2.java" -a -n "TestAnnotation"
+
 ################################################################################
 # Tests for tool termination on invalid sources, result is irrelevant
 

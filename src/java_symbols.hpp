@@ -135,6 +135,93 @@ inline static auto strict_mode = std::optional<Strict_mode>();
 namespace java_symbols
 {
 /*!
+ * Decodes a Unicode escape sequence \uXXXX to its character representation.
+ * 
+ * @param content The string content containing potential Unicode escape
+ * @param position The starting position to check for Unicode escape
+ * @param decoded_char Output parameter for the decoded character
+ * @param sequence_length Output parameter for the length of the Unicode sequence (0 if not a valid escape)
+ * 
+ * @return True if a valid Unicode escape sequence was found and decoded
+ */
+inline bool decode_unicode_escape(std::string_view content, std::ptrdiff_t position, char32_t& decoded_char, std::ptrdiff_t& sequence_length) noexcept
+{
+	sequence_length = 0;
+	
+	if (position + 5 >= std::ssize(content) || content[position] != '\\' || content[position + 1] != 'u')
+	{
+		return false;
+	}
+	
+	// Check for valid hex digits
+	auto hex_start = position + 2;
+	for (std::ptrdiff_t i = 0; i < 4; ++i)
+	{
+		char c = content[hex_start + i];
+		if (!std::isxdigit(static_cast<unsigned char>(c)))
+		{
+			return false;
+		}
+	}
+	
+	// Parse hex digits
+	char32_t result = 0;
+	for (std::ptrdiff_t i = 0; i < 4; ++i)
+	{
+		char c = content[hex_start + i];
+		result = result * 16;
+		if (c >= '0' && c <= '9')
+		{
+			result += c - '0';
+		}
+		else if (c >= 'A' && c <= 'F')
+		{
+			result += c - 'A' + 10;
+		}
+		else if (c >= 'a' && c <= 'f')
+		{
+			result += c - 'a' + 10;
+		}
+	}
+	
+	decoded_char = result;
+	sequence_length = 6; // \uXXXX
+	return true;
+}
+
+/*!
+ * Checks if a character at the given position (potentially Unicode-escaped) matches the target character.
+ * 
+ * @param content The string content to check
+ * @param position The position to check
+ * @param target_char The character to match against
+ * @param actual_length Output parameter for the actual length of the character representation
+ * 
+ * @return True if the character at position matches target_char
+ */
+inline bool char_matches_at_position(std::string_view content, std::ptrdiff_t position, char target_char, std::ptrdiff_t& actual_length) noexcept
+{
+	actual_length = 1; // Default for non-Unicode chars
+	
+	if (position >= std::ssize(content))
+	{
+		return false;
+	}
+	
+	// First check for Unicode escape
+	char32_t decoded_char;
+	std::ptrdiff_t unicode_length;
+	if (decode_unicode_escape(content, position, decoded_char, unicode_length))
+	{
+		actual_length = unicode_length;
+		return static_cast<char>(decoded_char) == target_char;
+	}
+	
+	// Regular character check
+	return content[position] == target_char;
+}
+
+/*!
  * Iterates over @p content starting at @p position to find the first character
  * which is not part of a Java comment nor a whitespace character.
  * 
@@ -191,10 +278,48 @@ inline bool is_identifier_char(char c) noexcept
 }
 
 /*!
+ * Checks if a character at the given position (potentially Unicode-escaped) is a valid identifier character.
+ * 
+ * @param content The string content to check
+ * @param position The position to check
+ * @param char_length Output parameter for the actual length of the character representation
+ * 
+ * @return True if the character at position is a valid identifier character
+ */
+inline bool is_identifier_char_at_position(std::string_view content, std::ptrdiff_t position, std::ptrdiff_t& char_length) noexcept
+{
+	char_length = 1; // Default for non-Unicode chars
+	
+	if (position >= std::ssize(content))
+	{
+		return false;
+	}
+	
+	// Check for Unicode escape first
+	char32_t decoded_char;
+	std::ptrdiff_t unicode_length;
+	if (decode_unicode_escape(content, position, decoded_char, unicode_length))
+	{
+		char_length = unicode_length;
+		// For Unicode escapes, we check if the decoded character would be a valid identifier char
+		if (decoded_char <= 127) // ASCII range
+		{
+			return is_identifier_char(static_cast<char>(decoded_char));
+		}
+		// For non-ASCII Unicode characters, they are generally valid identifier chars
+		// unless they are punctuation or whitespace
+		return decoded_char != 0x0040 && decoded_char != 0x002F && decoded_char != 0x002A; // '@', '/', '*'
+	}
+	
+	// Regular character check
+	return is_identifier_char(content[position]);
+}
+
+/*!
  * Iterates over @p content starting at @p position to find the next uncommented
  * symbol and returns it and an index pointing past it. The symbol is either a
  * sequence of alphanumeric characters or a single non-alphanumeric character or
- * an empty string if the end has been reached.
+ * an empty string if the end has been reached. Supports Unicode escape sequences.
  */
 inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view content, std::ptrdiff_t position = 0) noexcept
 {
@@ -206,13 +331,39 @@ inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view
 		
 		if (position < std::ssize(content))
 		{
-			symbol_length = 1;
+			std::ptrdiff_t char_length;
 			
-			if (is_identifier_char(content[position]))
+			// Check if the first character is an identifier character (possibly Unicode-escaped)
+			if (is_identifier_char_at_position(content, position, char_length))
 			{
-				while (position + symbol_length != std::ssize(content) and is_identifier_char(content[position + symbol_length]))
+				symbol_length = char_length;
+				
+				// Continue reading identifier characters
+				while (position + symbol_length < std::ssize(content))
 				{
-					++symbol_length;
+					std::ptrdiff_t next_char_length;
+					if (is_identifier_char_at_position(content, position + symbol_length, next_char_length))
+					{
+						symbol_length += next_char_length;
+					}
+					else
+					{
+						break;
+					}
+				}
+			}
+			else
+			{
+				// Single non-identifier character (could be Unicode-escaped)
+				char32_t decoded_char;
+				std::ptrdiff_t unicode_length;
+				if (decode_unicode_escape(content, position, decoded_char, unicode_length))
+				{
+					symbol_length = unicode_length;
+				}
+				else
+				{
+					symbol_length = 1;
 				}
 			}
 		}
@@ -224,7 +375,7 @@ inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view
 /*!
  * Iterates over @p content starting at @p position to find a string @p token
  * which is present in the source code neither inside a comment nor inside a
- * string nor inside a character literal.
+ * string nor inside a character literal. Supports Unicode escape sequences.
  * 
  * Special case when @p token == ')', this function counts opening and closing
  * parentheses and returns the first parenthesis outside.
@@ -238,7 +389,7 @@ inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view
 inline std::ptrdiff_t find_token(std::string_view content, std::string_view token,
 	std::ptrdiff_t position = 0, bool alphanumeric = false, std::ptrdiff_t stack = 0) noexcept
 {
-	while (position + std::ssize(token) <= std::ssize(content))
+	while (position < std::ssize(content))
 	{
 		position = ignore_whitespace_comments(content, position);
 		
@@ -247,15 +398,58 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 			break;
 		}
 		
-		auto substr = content.substr(position, token.length());
-		
-		if ((token != ")" or stack == 0) and substr == token
-			and not (alphanumeric and ((position > 0 and is_identifier_char(content[position - 1]))
-				or (position + std::ssize(token) < std::ssize(content) and (is_identifier_char(content[position + token.length()]))))))
+		// Check for single character tokens (like '@', '/', '*') that might be Unicode-escaped
+		if (token.length() == 1)
 		{
-			return position;
+			std::ptrdiff_t char_length;
+			if (char_matches_at_position(content, position, token[0], char_length))
+			{
+				bool is_valid_match = true;
+				
+				// Apply alphanumeric constraints if needed
+				if (alphanumeric)
+				{
+					std::ptrdiff_t prev_char_length;
+					if (position > 0 && is_identifier_char_at_position(content, position - 1, prev_char_length))
+					{
+						is_valid_match = false;
+					}
+					else
+					{
+						std::ptrdiff_t next_char_length;
+						if (position + char_length < std::ssize(content) && is_identifier_char_at_position(content, position + char_length, next_char_length))
+						{
+							is_valid_match = false;
+						}
+					}
+				}
+				
+				// Special handling for parentheses stack counting
+				if (token == ")" && stack == 0 && is_valid_match)
+				{
+					return position;
+				}
+				else if (token != ")" && is_valid_match)
+				{
+					return position;
+				}
+			}
 		}
-		else if (content[position] == '\'')
+		// Multi-character tokens - check regular substring match
+		else if (position + std::ssize(token) <= std::ssize(content))
+		{
+			auto substr = content.substr(position, token.length());
+			
+			if ((token != ")" or stack == 0) and substr == token
+				and not (alphanumeric and ((position > 0 and is_identifier_char(content[position - 1]))
+					or (position + std::ssize(token) < std::ssize(content) and (is_identifier_char(content[position + token.length()]))))))
+			{
+				return position;
+			}
+		}
+		
+		// Handle string and character literals, and parentheses counting
+		if (content[position] == '\'')
 		{
 			if (content.substr(position, 4) == "'\\''")
 			{
@@ -295,6 +489,16 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 		{
 			++stack;
 		}
+		else
+		{
+			// Check if we're at a Unicode escape and skip it appropriately
+			char32_t decoded_char;
+			std::ptrdiff_t unicode_length;
+			if (decode_unicode_escape(content, position, decoded_char, unicode_length))
+			{
+				position += unicode_length - 1; // -1 because we'll increment at the end of the loop
+			}
+		}
 		
 		++position;
 	}
@@ -320,8 +524,12 @@ inline std::tuple<std::string_view, std::string> next_annotation(std::string_vie
 	
 	if (position < std::ssize(content))
 	{
+		// Calculate the actual length of the @ symbol (could be Unicode-escaped)
+		std::ptrdiff_t at_symbol_length;
+		char_matches_at_position(content, position, '@', at_symbol_length);
+		
 		auto symbol = std::string_view();
-		std::tie(symbol, end_pos) = next_symbol(content, position + 1);
+		std::tie(symbol, end_pos) = next_symbol(content, position + at_symbol_length);
 		auto new_end_pos = end_pos;
 		
 		while (not symbol.empty())
