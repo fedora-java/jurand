@@ -136,11 +136,12 @@ namespace java_symbols
 {
 /*!
  * Decodes a Unicode escape sequence \uXXXX to its character representation.
+ * Simplified version assuming valid Java source files.
  * 
  * @param content The string content containing potential Unicode escape
  * @param position The starting position to check for Unicode escape
  * @param decoded_char Output parameter for the decoded character
- * @param sequence_length Output parameter for the length of the Unicode sequence (0 if not a valid escape)
+ * @param sequence_length Output parameter for the length of the Unicode sequence
  * 
  * @return True if a valid Unicode escape sequence was found and decoded
  */
@@ -153,7 +154,7 @@ inline bool decode_unicode_escape(std::string_view content, std::ptrdiff_t posit
 		return false;
 	}
 	
-	// Check for valid hex digits
+	// Check for valid hex digits - simplified validation
 	auto hex_start = position + 2;
 	for (std::ptrdiff_t i = 0; i < 4; ++i)
 	{
@@ -164,7 +165,7 @@ inline bool decode_unicode_escape(std::string_view content, std::ptrdiff_t posit
 		}
 	}
 	
-	// Parse hex digits
+	// Parse hex digits - simplified logic
 	char32_t result = 0;
 	for (std::ptrdiff_t i = 0; i < 4; ++i)
 	{
@@ -191,6 +192,7 @@ inline bool decode_unicode_escape(std::string_view content, std::ptrdiff_t posit
 
 /*!
  * Checks if a character at the given position (potentially Unicode-escaped) matches the target character.
+ * Simplified version assuming valid Java source files.
  * 
  * @param content The string content to check
  * @param position The position to check
@@ -331,39 +333,13 @@ inline std::tuple<std::string_view, std::ptrdiff_t> next_symbol(std::string_view
 		
 		if (position < std::ssize(content))
 		{
-			std::ptrdiff_t char_length;
+			symbol_length = 1;
 			
-			// Check if the first character is an identifier character (possibly Unicode-escaped)
-			if (is_identifier_char_at_position(content, position, char_length))
+			if (is_identifier_char(content[position]))
 			{
-				symbol_length = char_length;
-				
-				// Continue reading identifier characters
-				while (position + symbol_length < std::ssize(content))
+				while (position + symbol_length != std::ssize(content) and is_identifier_char(content[position + symbol_length]))
 				{
-					std::ptrdiff_t next_char_length;
-					if (is_identifier_char_at_position(content, position + symbol_length, next_char_length))
-					{
-						symbol_length += next_char_length;
-					}
-					else
-					{
-						break;
-					}
-				}
-			}
-			else
-			{
-				// Single non-identifier character (could be Unicode-escaped)
-				char32_t decoded_char;
-				std::ptrdiff_t unicode_length;
-				if (decode_unicode_escape(content, position, decoded_char, unicode_length))
-				{
-					symbol_length = unicode_length;
-				}
-				else
-				{
-					symbol_length = 1;
+					++symbol_length;
 				}
 			}
 		}
@@ -409,18 +385,13 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 				// Apply alphanumeric constraints if needed
 				if (alphanumeric)
 				{
-					std::ptrdiff_t prev_char_length;
-					if (position > 0 && is_identifier_char_at_position(content, position - 1, prev_char_length))
+					if (position > 0 && is_identifier_char(content[position - 1]))
 					{
 						is_valid_match = false;
 					}
-					else
+					else if (position + char_length < std::ssize(content) && is_identifier_char(content[position + char_length]))
 					{
-						std::ptrdiff_t next_char_length;
-						if (position + char_length < std::ssize(content) && is_identifier_char_at_position(content, position + char_length, next_char_length))
-						{
-							is_valid_match = false;
-						}
+						is_valid_match = false;
 					}
 				}
 				
@@ -496,7 +467,7 @@ inline std::ptrdiff_t find_token(std::string_view content, std::string_view toke
 			std::ptrdiff_t unicode_length;
 			if (decode_unicode_escape(content, position, decoded_char, unicode_length))
 			{
-				position += unicode_length - 1; // -1 because we'll increment at the end of the loop
+				position += unicode_length - 1; // -1 because we'll increment at the end
 			}
 		}
 		
