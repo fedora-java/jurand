@@ -224,8 +224,59 @@ inline bool char_matches_at_position(std::string_view content, std::ptrdiff_t po
 }
 
 /*!
+ * Helper function to check for Unicode-escaped comment delimiters.
+ * Checks for patterns like \u002F\u002F (//) or \u002F\u002A (slash-star)
+ */
+inline std::ptrdiff_t check_unicode_comment_start(std::string_view content, std::ptrdiff_t position) noexcept
+{
+	// Check for \u002F\u002F (Unicode-escaped //)
+	std::ptrdiff_t char1_length, char2_length;
+	if (char_matches_at_position(content, position, '/', char1_length) &&
+	    position + char1_length < std::ssize(content) &&
+	    char_matches_at_position(content, position + char1_length, '/', char2_length))
+	{
+		// Single-line comment - find newline
+		auto comment_start = position + char1_length + char2_length;
+		position = content.find('\n', comment_start);
+		
+		if (position == std::ptrdiff_t(content.npos))
+		{
+			return std::ssize(content);
+		}
+		
+		return position + 1;
+	}
+	// Check for \u002F\u002A (Unicode-escaped /*)
+	else if (char_matches_at_position(content, position, '/', char1_length) &&
+	         position + char1_length < std::ssize(content) &&
+	         char_matches_at_position(content, position + char1_length, '*', char2_length))
+	{
+		// Multi-line comment - find */
+		auto comment_start = position + char1_length + char2_length;
+		
+		// Look for end of comment (could also be Unicode-escaped)
+		while (comment_start < std::ssize(content))
+		{
+			std::ptrdiff_t end_char1_length, end_char2_length;
+			if (char_matches_at_position(content, comment_start, '*', end_char1_length) &&
+			    comment_start + end_char1_length < std::ssize(content) &&
+			    char_matches_at_position(content, comment_start + end_char1_length, '/', end_char2_length))
+			{
+				return comment_start + end_char1_length + end_char2_length;
+			}
+			++comment_start;
+		}
+		
+		return std::ssize(content); // Unterminated comment
+	}
+	
+	return position; // No comment found
+}
+
+/*!
  * Iterates over @p content starting at @p position to find the first character
  * which is not part of a Java comment nor a whitespace character.
+ * Supports Unicode-escaped comment delimiters.
  * 
  * @return The position of the first non-whitespace non-comment character or the
  * length of the string if none is found.
@@ -242,6 +293,7 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::
 		
 		auto result = position;
 		
+		// Check for regular comment delimiters first
 		if (auto subst = content.substr(position, 2); subst == "//")
 		{
 			position = content.find('\n', position + 2);
@@ -263,6 +315,15 @@ inline std::ptrdiff_t ignore_whitespace_comments(std::string_view content, std::
 			}
 			
 			position += 2;
+		}
+		else
+		{
+			// Check for Unicode-escaped comment delimiters
+			auto unicode_comment_pos = check_unicode_comment_start(content, position);
+			if (unicode_comment_pos != position)
+			{
+				position = unicode_comment_pos;
+			}
 		}
 		
 		if (result == position)
