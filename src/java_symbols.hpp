@@ -113,6 +113,7 @@ private:
 struct Parameters
 {
 	std::vector<Named_regex> patterns_;
+	std::vector<Named_regex> module_patterns_;
 	String_view_set names_;
 	bool also_remove_annotations_ = false;
 	bool in_place_ = false;
@@ -123,6 +124,7 @@ struct Strict_mode
 {
 	std::atomic<bool> any_annotation_removed_ = false;
 	Mutex<std::map<std::string_view, bool, std::less<>>> patterns_matched_;
+	Mutex<std::map<std::string_view, bool, std::less<>>> module_patterns_matched_;
 	Mutex<std::map<std::string_view, bool, std::less<>>> names_matched_;
 	Mutex<std::map<std::string_view, bool>> files_truncated_;
 };
@@ -587,24 +589,141 @@ inline std::string remove_annotations(std::string_view content, std::span<const 
 	return result;
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
-inline std::string handle_content(std::string_view content, const Parameters& parameters)
+inline std::string remove_jpms_requires(std::string_view content, std::span<const Named_regex> module_patterns)
 {
-	auto [new_content, removed_classes] = remove_imports(content, parameters.patterns_, parameters.names_);
+	auto new_content = std::string(content);
+	new_content.reserve(content.size());
 	
-	if (parameters.also_remove_annotations_)
+	auto pos = std::ptrdiff_t(0);
+	pos = find_token(content, "module");
+	pos = find_token(content, "{", pos);
+	
+	if (pos != std::ssize(content))
 	{
-		auto content_size = new_content.size();
-		new_content = remove_annotations(new_content, parameters.patterns_, parameters.names_, removed_classes);
-		
-		if (strict_mode and new_content.size() < content_size)
+		++pos;
+		new_content.clear();
+		new_content.append(content, 0, pos);
+		while (pos != std::ssize(content))
 		{
-			strict_mode->any_annotation_removed_.store(true, std::memory_order_release);
+			auto symbol = std::string_view();
+			auto end_pos = std::ptrdiff_t(0);
+			auto old_pos = pos;
+			std::tie(symbol, end_pos) = next_symbol(content, pos);
+			
+			if (symbol.empty())
+			{
+				break;
+			}
+			
+			if (symbol == "requires")
+			{
+				pos = end_pos;
+			}
+			else
+			{
+				pos = find_token(content, ";", pos);
+				if (pos != std::ssize(content))
+				{
+					++pos;
+				}
+				new_content.append(content, old_pos, pos - old_pos);
+				continue;
+			}
+			
+			std::tie(symbol, end_pos) = next_symbol(content, pos);
+			if (symbol == "transitive")
+			{
+				pos = end_pos;
+			}
+			else if (symbol == "static")
+			{
+				pos = end_pos;
+				std::tie(symbol, end_pos) = next_symbol(content, pos);
+				if (symbol == "transitive")
+				{
+					pos = end_pos;
+				}
+			}
+			
+			auto module_name = std::string();
+			
+			std::tie(symbol, end_pos) = next_symbol(content, pos);
+			while (symbol != ";")
+			{
+				if (symbol.empty())
+				{
+					new_content.clear();
+					new_content.append(content);
+					return new_content;
+				}
+				
+				module_name += symbol;
+				std::tie(symbol, end_pos) = next_symbol(content, end_pos);
+			}
+			
+			pos = end_pos;
+			
+			bool matched = false;
+			for (const auto& pattern : module_patterns)
+			{
+				if (std::regex_search(module_name.begin(), module_name.end(), pattern))
+				{
+					if (strict_mode)
+					{
+						strict_mode->module_patterns_matched_.lock().get().at(pattern) = true;
+					}
+					
+					matched = true;
+					break;
+				}
+			}
+			
+			if (matched)
+			{
+				if (auto skip_space = find_newline(content, pos); skip_space != -1)
+				{
+					pos = skip_space;
+				}
+			}
+			else
+			{
+				new_content.append(content, old_pos, pos - old_pos);
+			}
 		}
 	}
 	
 	return new_content;
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+inline std::string handle_content(const Path_origin_entry& path, std::string_view content, const Parameters& parameters)
+{
+	auto result = std::string();
+	
+	if (path.filename() == "module-info.java")
+	{
+		result = remove_jpms_requires(content, parameters.module_patterns_);
+	}
+	else
+	{
+		auto [new_content, removed_classes] = remove_imports(content, parameters.patterns_, parameters.names_);
+		
+		if (parameters.also_remove_annotations_)
+		{
+			auto content_size = new_content.size();
+			new_content = remove_annotations(new_content, parameters.patterns_, parameters.names_, removed_classes);
+			
+			if (strict_mode and new_content.size() < content_size)
+			{
+				strict_mode->any_annotation_removed_.store(true, std::memory_order_release);
+			}
+		}
+		
+		result = new_content;
+	}
+	
+	return result;
 }
 
 inline std::string handle_file(const Path_origin_entry& path, const Parameters& parameters)
@@ -629,7 +748,7 @@ try
 		original_content = std::string(std::istreambuf_iterator<char>(ifs), {});
 	}
 	
-	auto content = handle_content(original_content, parameters);
+	auto content = handle_content(path, original_content, parameters);
 	
 	if (not parameters.in_place_)
 	{
@@ -714,11 +833,17 @@ inline Parameters interpret_args(const Parameter_dict& parameters)
 	
 	if (auto it = parameters.find("-p"); it != parameters.end())
 	{
-		result.patterns_.reserve(it->second.size());
-		
 		for (const auto& pattern : it->second)
 		{
 			result.patterns_.emplace_back(pattern, std::regex_constants::extended);
+		}
+	}
+	
+	if (auto it = parameters.find("-m"); it != parameters.end())
+	{
+		for (const auto& pattern : it->second)
+		{
+			result.module_patterns_.emplace_back(pattern, std::regex_constants::extended);
 		}
 	}
 	

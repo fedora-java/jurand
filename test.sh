@@ -11,6 +11,9 @@ mkdir -p target/test_resources
 run_tool()
 {
 	local filename="${1}"; shift
+	if [[ "${filename}" == */* ]]; then
+		mkdir -p "target/test_resources/${filename%/*}"
+	fi
 	cp -r "test_resources/${filename}" "target/test_resources/${filename}"
 	./target/bin/jurand -i "target/test_resources/${filename}" "${@}"
 }
@@ -19,6 +22,9 @@ test_file()
 {
 	local filename="${1}"; shift
 	local expected="${1}"; shift
+	if [ -d "test_resources/${expected%/*}" ]; then
+		mkdir -p "target/test_resources/${expected%/*}"
+	fi
 	cp "test_resources/${expected}" "target/test_resources/${expected}"
 	run_tool "${filename}" "${@}"
 	diff -u "target/test_resources/${filename}" "target/test_resources/${expected}"
@@ -153,6 +159,27 @@ test_file "Array.java" "Array.5.java" -a -n C -n D -n E -n F
 test_file "Package_info.java" "Package_info.1.java" -a -n MyAnn
 
 ################################################################################
+# Tests for module-info handling
+test_file "simple_module/module-info.java" "simple_module/module-info.1.java" -m "java[.]base"
+# Remove requires transitive
+test_file "simple_module/module-info.java" "simple_module/module-info.2.java" -m "java[.]sql"
+# Remove requires static
+test_file "simple_module/module-info.java" "simple_module/module-info.3.java" -m "java[.]logging"
+# Remove requires static transitive
+test_file "simple_module/module-info.java" "simple_module/module-info.4.java" -m "org[.]jetbrains"
+# Remove all requires
+test_file "simple_module/module-info.java" "simple_module/module-info.5.java" -m "java" -m "org[.]jetbrains"
+
+################################################################################
+# Tests for tool termination on invalid module-info.java sources
+run_tool "module_termination_1/module-info.java" -m "java" || :
+run_tool "module_termination_2/module-info.java" -m "java" || :
+run_tool "module_termination_3/module-info.java" -m "java" || :
+run_tool "module_termination_4/module-info.java" -m "java" || :
+run_tool "module_termination_5/module-info.java" -m "java" || :
+run_tool "module_termination_6/module-info.java" -m "java" || :
+
+################################################################################
 # Tests for tool termination on invalid sources, result is irrelevant
 
 run_tool "Termination.1.java" -n "C" || :
@@ -188,6 +215,12 @@ test_strict "Strict.2.java" "Strict.2.java" -a -p "a"
 test_strict "Strict.2.java" "Strict.2.java" -a -n "C"
 # Should print the directory name
 run_tool "directory" -a -s -n "XXX" | grep "strict mode:.*/directory" 1>/dev/null
+
+# Strict mode tests for module patterns
+# Successful for coverage
+test_file "simple_module/module-info.java" "simple_module/module-info.1.java" -s -m "java[.]base"
+# Module pattern that doesn't match anything
+test_strict "simple_module/module-info.java" "simple_module/module-info.java" -m "nonexistent[.]module"
 
 ################################################################################
 
