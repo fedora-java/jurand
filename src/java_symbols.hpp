@@ -419,6 +419,25 @@ inline bool name_matches(std::string_view name, std::span<const Named_regex> pat
 }
 
 /*!
+ * Iterates over @p content to find newline starting from position @p pos.
+ * 
+ * @return The position of the newline or `-1` if not found.
+ */
+inline std::ptrdiff_t find_newline(std::string_view content, std::ptrdiff_t pos)
+{
+	while (pos != std::ssize(content) and std::isspace(static_cast<unsigned char>(content[pos])))
+	{
+		if (content[pos] == '\n')
+		{
+			return pos;
+		}
+		++pos;
+	}
+	
+	return -1;
+}
+
+/*!
  * Iterates over @p content to remove all import statements provided
  * as @p patterns and @p names. Patterns match the string representation
  * following the `import [static]` string. @p names match only the simple
@@ -472,20 +491,9 @@ inline std::tuple<std::string, String_map> remove_imports(
 				std::tie(symbol, end_pos) = next_symbol(content, end_pos);
 			}
 			
-			// Skip whitespace until one newline but only if a newline is found
+			if (auto skip_space = find_newline(content, end_pos); skip_space != -1)
 			{
-				auto skip_space = end_pos;
-				
-				while (skip_space != std::ssize(content) and std::isspace(static_cast<unsigned char>(content[skip_space])))
-				{
-					++skip_space;
-					
-					if (content[skip_space - 1] == '\n')
-					{
-						end_pos = skip_space;
-						break;
-					}
-				}
+				end_pos = skip_space + 1;
 			}
 			
 			copy_end = end_pos;
