@@ -7,7 +7,7 @@
 jurand - Java removal of annotations
 
 == SYNOPSIS
-*jurand* [*-a*] [*-i*] [*-s*] [*-n*=_<name>_] [*-p*=<pattern>] [_<paths>_...]
+*jurand* [*-a*] [*-i*] [*-s*] [*-n*=_<name>_] [*-p|-m|-pm*=_<pattern>_] [_<paths>_...]
 
 == DESCRIPTION
 A tool for manipulating symbols present in `.java` source files.
@@ -15,7 +15,7 @@ A tool for manipulating symbols present in `.java` source files.
 The tool can be used for patching `.java` sources in cases where using sed is insufficient due to Java language syntax.
 The tool follows Java language rules rather than applying simple regular expressions on the source code.
 
-Currently the tool is able to remove `import` statements and annotations.
+Currently the tool is able to remove `import` statements, annotations and module `requires` statements.
 
 == OPTIONS
 *-n*, *--name*=_<name>_::
@@ -23,6 +23,12 @@ Simple (not fully-qualified) class name.
 
 *-p*, *--pattern*=_<pattern>_::
 Regex pattern to match names used in code.
+
+*-m*, *--pattern*=_<pattern>_::
+Regex pattern to match module name requires fields used in `module-info.java` files.
+
+*-pm*, *--pattern*=_<pattern>_::
+Same as specifying *-p* and *-m* options with the same pattern
 
 *-a*::
 Also remove annotations used in code.
