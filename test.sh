@@ -19,6 +19,9 @@ test_file()
 {
 	local filename="${1}"; shift
 	local expected="${1}"; shift
+	if [ -d "test_resources/${expected%/*}" ]; then
+		mkdir -p "target/test_resources/${expected%/*}"
+	fi
 	cp "test_resources/${expected}" "target/test_resources/${expected}"
 	run_tool "${filename}" "${@}"
 	diff -u "target/test_resources/${filename}" "target/test_resources/${expected}"
@@ -151,6 +154,10 @@ test_file "Array.java" "Array.4.java" -a -n F
 test_file "Array.java" "Array.5.java" -a -n C -n D -n E -n F
 
 test_file "Package_info.java" "Package_info.1.java" -a -n MyAnn
+
+################################################################################
+# Tests for module-info handling
+test_file "simple_module/module-info.java" "simple_module/module-info.1.java" -m "java[.]base"
 
 ################################################################################
 # Tests for tool termination on invalid sources, result is irrelevant
