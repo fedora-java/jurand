@@ -18,10 +18,10 @@ The tool follows Java language rules rather than applying simple regular express
 Currently the tool is able to remove `import` statements and annotations.
 
 == OPTIONS
-*-n*, *--name*=_<name>_::
+*-n _<name>_::
 Simple (not fully-qualified) class name.
 
-*-p*, *--pattern*=_<pattern>_::
+*-p _<pattern>_::
 Regex pattern to match names used in code.
 
 *-a*::
