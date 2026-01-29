@@ -198,7 +198,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		
 		if (parameters.also_remove_annotations_ and not strict_mode->any_annotation_removed_.load(std::memory_order_acquire))
 		{
-			std::cout << "jurand: strict mode: -a was specified but no annotation was removed" << "\n";
+			std::cout << "jurand: strict mode: '-a' was specified but no annotation was removed" << "\n";
 			exit_code = 3;
 		}
 	}
