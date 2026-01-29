@@ -5,8 +5,8 @@
 
 using namespace java_symbols;
 
-template <typename T1, typename T2>
-static std::ostream &operator<<(std::ostream &os, const std::tuple<T1, T2> &t)
+template<typename T1, typename T2>
+static std::ostream& operator<<(std::ostream& os, const std::tuple<T1, T2>& t)
 {
 	return os << "(" << std::get<0>(t) << ", " << std::get<1>(t) << ")";
 }

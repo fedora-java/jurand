@@ -21,6 +21,8 @@ Usage: jurand [optional flags] <matcher>... [file path]...
                 simple (not fully-qualified) class name
         -p <pattern>
                 regex pattern to match names used in code
+        -m <pattern>
+                regex pattern to match module name requires fields used in 'module-info.java' files
         
     Optional flags:
         -a      also remove annotations used in code
@@ -38,7 +40,7 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 	
 	const auto parameters = interpret_args(parameter_dict);
 	
-	if (parameters.names_.empty() and parameters.patterns_.empty())
+	if (parameters.names_.empty() and parameters.patterns_.empty() and parameters.module_patterns_.empty())
 	{
 		std::cout << "jurand: no matcher specified" << "\n";
 		return 1;
@@ -111,6 +113,11 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 		for (const auto& pattern : parameters.patterns_)
 		{
 			strict_mode->patterns_matched_.lock().get().try_emplace(pattern);
+		}
+		
+		for (const auto& pattern : parameters.module_patterns_)
+		{
+			strict_mode->module_patterns_matched_.lock().get().try_emplace(pattern);
 		}
 		
 		for (const auto& name : parameters.names_)
@@ -196,9 +203,18 @@ Usage: jurand [optional flags] <matcher>... [file path]...
 			}
 		}
 		
+		for (const auto& pattern_entry : strict_mode->module_patterns_matched_.lock().get())
+		{
+			if (not pattern_entry.second)
+			{
+				std::cout << "jurand: strict mode: module pattern " << pattern_entry.first << " did not match anything" << "\n";
+				exit_code = 3;
+			}
+		}
+		
 		if (parameters.also_remove_annotations_ and not strict_mode->any_annotation_removed_.load(std::memory_order_acquire))
 		{
-			std::cout << "jurand: strict mode: -a was specified but no annotation was removed" << "\n";
+			std::cout << "jurand: strict mode: '-a' was specified but no annotation was removed" << "\n";
 			exit_code = 3;
 		}
 	}

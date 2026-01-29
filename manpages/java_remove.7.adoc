@@ -1,0 +1,121 @@
+= java_remove(7)
+:doctype: manpage
+:mansource: JAVA_REMOVE
+:manmanual: Java packaging support
+
+== NAME
+java_remove - remove dependency declarations or annotations from Java source files
+
+== SYNOPSIS
+*%java_remove* [optional flags] <matcher>... [file path]...
+
+== DESCRIPTION
+This macro removes annotations, corresponding *import* statements and modular *requires* statements from Java source files.
+
+Annotations and import statements are matched using *-p* and *-n* flags.
+Modular requires statements are matched using the *-m* flag.
+
+The tool matches all non-whitespace content following the 'import [static]' statement against all patterns provided via the *-p* flag and all simple class names against names provided by the *-n* flag.
+
+In *module-info.java* files, all content following 'requires [static] [transitive]' is matched against all patterns provided via the *-m* flag.
+
+File path arguments are handled the following way:
+
+* Symlinks are ignored.
+* Regular files are handled regardless of the file name.
+* Directories are traversed recursively and all `.java` files are handled.
+
+Arguments can be specified in arbitrary order.
+
+Optional flags:
+
+*-s*, *--strict*::
+Fail if any of the user provided arguments were redundant.
+
+*-a*::
+Also remove annotations used in code.
+Annotations will be matched by the non-modular matchers.
+
+Matcher is one of:
+
+*-n <name>*::
+Simple class name to be matched against the simple names of imported symbols.
+Names are matched for exact equality.
+Can be specified multiple times.
+
+*-p <pattern>*::
+Regex patterns to be matched against imported symbols.
+Each imported symbol found in the code is matched against each pattern.
+Can be specified multiple times.
+
+*-m <pattern>*::
+Regex pattern to match module name `requires` fields used in `module-info.java` files.
+Can be specified multiple times.
+
+== EXAMPLES
+Examples of usage in a *.spec* file:
+
+- *%java_remove module-api module-impl module-tests -s -a -n Nullable*
+- *%java_remove src -s -a -p org[.]jspecify[.]annotations -m org[.]jspecify*
+
+=== Import patterns:
+- Import statements present in Java source file:
+
+    1) import java.lang.Runnable;
+    2) import java.util.List;
+    3) import static java.util.*;
+    4) import static java.lang.String.valueOf;
+    5) import com.google.common.util.concurrent.Service;
+
+- Names used to match:
+
+    Name 'Runnable' matches 1)
+    Name 'String' matches 4)
+
+    Name 'util' does not match anything.
+    Name '*' does not match anything.
+    Name 'valueOf' does not match anything.
+
+- Patterns used to match:
+
+    Pattern 'Runnable' matches 1).
+    Pattern '[*]' matches 3).
+    Pattern 'java[.]util' matches 2), 3).
+    Pattern 'util' matches 2), 3), 5).
+    Patterns 'java', 'java.*' match 1) - 4).
+    
+    Pattern 'static' does not match anything.
+
+=== Annotations
+- Annotations present in Java source file:
+
+    1) @SuppressWarnings
+    2) @SuppressFBWarnings(value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
+    3) @org.junit.Test
+    4) @org.junit.jupiter.api.Test
+
+- Names used to match:
+
+    Name 'SuppressWarnings' matches 1)
+    Name 'Test' matches 3), 4).
+
+    Name 'junit' does not match anything.
+
+- Patterns used to match:
+
+    Pattern 'SuppressWarnings' matches 1).
+    Pattern 'Suppress' matches 1), 2).
+    Pattern 'org[.]junit[.]Test' matches 3).
+    Pattern 'junit' matches 3), 4).
+
+    Pattern '@SuppressWarnings' does not match anything.
+    Pattern 'EI_EXPOSE_REP' does not match anything.
+
+== REPORTING BUGS
+Bugs should be reported through the issue tracker at GitHub: https://github.com/fedora-java/jurand/issues.
+
+== AUTHOR
+Written by Marián Konček.
+
+== SEE ALSO
+*jurand*(1).
