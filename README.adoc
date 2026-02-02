@@ -1,8 +1,8 @@
 = Jurand -- Java removal of annotations
 
-A tool for manipulating symbols present in `.java` source files.
+A tool for manipulating symbols present in Java source files.
 
-The tool can be used for patching `.java` sources in cases where using `sed` is insufficient due to Java language syntax.
+The tool can be used for patching Java sources in cases where using `sed` is insufficient due to Java language syntax.
 The tool follows Java language rules rather than applying simple regular expressions on the source code.
 
 Currently the tool is able to remove `import` statements, annotations and modular `requires` statements.
