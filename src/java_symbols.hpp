@@ -699,11 +699,9 @@ inline std::string remove_jpms_requires(std::string_view content, std::span<cons
 
 inline std::string handle_content(const Path_origin_entry& path, std::string_view content, const Parameters& parameters)
 {
-	auto result = std::string();
-	
 	if (path.filename() == "module-info.java")
 	{
-		result = remove_jpms_requires(content, parameters.module_patterns_);
+		return remove_jpms_requires(content, parameters.module_patterns_);
 	}
 	else
 	{
@@ -720,10 +718,8 @@ inline std::string handle_content(const Path_origin_entry& path, std::string_vie
 			}
 		}
 		
-		result = new_content;
+		return new_content;
 	}
-	
-	return result;
 }
 
 inline std::string handle_file(const Path_origin_entry& path, const Parameters& parameters)
