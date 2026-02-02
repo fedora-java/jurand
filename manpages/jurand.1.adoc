@@ -4,18 +4,29 @@
 :manmanual: Jurand Manual
 
 == NAME
-jurand - Java removal of annotations
+jurand - remove dependency declarations or annotations from Java source files
 
 == SYNOPSIS
-*jurand* [*-a*] [*-i*] [*-s*] [*-n*=_<name>_] [*-p|-m*=_<pattern>_] [_<paths>_...]
+*jurand* [*-i*] [*-s*] [*-a*] [*-n* _<name>_] [*-p|-m* _<pattern>_] [_<paths>_...]
 
 == DESCRIPTION
-A tool for manipulating symbols present in `.java` source files.
+This tool removes annotations, corresponding *import* statements and modular *requires* statements from Java source files.
 
-The tool can be used for patching `.java` sources in cases where using sed is insufficient due to Java language syntax.
+The tool can be used for patching Java sources in cases where using sed is insufficient due to Java language syntax.
 The tool follows Java language rules rather than applying simple regular expressions on the source code.
 
-Currently the tool is able to remove `import` statements, annotations and module `requires` statements.
+The tool matches all non-whitespace content following the 'import [static]' statement against all patterns provided via the *-p* flag and all simple class names against names provided by the *-n* flag.
+
+In *module-info.java* files, all content following 'requires [static] [transitive]' is matched against all patterns provided via the *-m* flag.
+
+File path arguments are handled the following way:
+
+* Symlinks are ignored.
+* Regular files are handled regardless of the file name.
+* Directories are traversed recursively and all *.java* files are handled.
+* *module-info.java* files are handled specifically.
+
+Arguments can be specified in arbitrary order.
 
 == OPTIONS
 *-n _<name>_::
@@ -25,7 +36,7 @@ Simple (not fully-qualified) class name.
 Regex pattern to match names used in code.
 
 *-m _<pattern>_::
-Regex pattern to match module name `requires` fields used in `module-info.java` files.
+Regex pattern to match module name *requires* fields used in *module-info.java* files.
 
 *-a*::
 Also remove annotations used in code.
@@ -37,13 +48,67 @@ Replace the contents of files.
 Fail if any of the specified options was redundant and no changes associated with the option were made.
 This option is only applicable together with *-i*.
 
+== EXAMPLES
+Examples of usage in a *.spec* file:
+
+- *jurand -i -s -a module-api module-impl module-tests -n Nullable*
+- *jurand -i -s -a src -p org[.]jspecify[.]annotations -m org[.]jspecify*
+
+=== Import patterns:
+- Import statements present in Java source file:
+
+    1) import java.lang.Runnable;
+    2) import java.util.List;
+    3) import static java.util.*;
+    4) import static java.lang.String.valueOf;
+    5) import com.google.common.util.concurrent.Service;
+
+- Names used to match:
+
+    Name 'Runnable' matches 1)
+    Name 'String' matches 4)
+
+    Name 'util' does not match anything.
+    Name '*' does not match anything.
+    Name 'valueOf' does not match anything.
+
+- Patterns used to match:
+
+    Pattern 'Runnable' matches 1).
+    Pattern '[*]' matches 3).
+    Pattern 'java[.]util' matches 2), 3).
+    Pattern 'util' matches 2), 3), 5).
+    Patterns 'java', 'java.*' match 1) - 4).
+    
+    Pattern 'static' does not match anything.
+
+=== Annotations
+- Annotations present in Java source file:
+
+    1) @SuppressWarnings
+    2) @SuppressFBWarnings(value = {"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
+    3) @org.junit.Test
+    4) @org.junit.jupiter.api.Test
+
+- Names used to match:
+
+    Name 'SuppressWarnings' matches 1)
+    Name 'Test' matches 3), 4).
+
+    Name 'junit' does not match anything.
+
+- Patterns used to match:
+
+    Pattern 'SuppressWarnings' matches 1).
+    Pattern 'Suppress' matches 1), 2).
+    Pattern 'org[.]junit[.]Test' matches 3).
+    Pattern 'junit' matches 3), 4).
+
+    Pattern '@SuppressWarnings' does not match anything.
+    Pattern 'EI_EXPOSE_REP' does not match anything.
+
 == REPORTING BUGS
 Bugs should be reported through the Jurand issue tracker at Github: https://github.com/fedora-java/jurand/issues.
 
 == AUTHOR
 Written by Marián Konček.
-
-== SEE ALSO
-*java_remove*(7),
-*java_remove_annotations*(7),
-*java_remove_imports*(7).
