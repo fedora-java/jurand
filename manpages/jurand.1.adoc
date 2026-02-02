@@ -13,7 +13,7 @@ jurand - remove dependency declarations or annotations from Java source files
 This tool removes annotations, corresponding *import* statements and modular *requires* statements from Java source files.
 
 The tool can be used for patching Java sources in cases where using sed is insufficient due to Java language syntax.
-The tool follows Java language rules rather than applying simple regular expressions on the source code.
+It follows Java language rules rather than applying simple regular expressions on the source code.
 
 The tool matches all non-whitespace content following the 'import [static]' statement against all patterns provided via the *-p* flag and all simple class names against names provided by the *-n* flag.
 
@@ -24,7 +24,7 @@ File path arguments are handled the following way:
 * Symlinks are ignored.
 * Regular files are handled regardless of the file name.
 * Directories are traversed recursively and all *.java* files are handled.
-* *module-info.java* files are handled specifically.
+* Files named *module-info.java* are handled specifically.
 
 Arguments can be specified in arbitrary order.
 
