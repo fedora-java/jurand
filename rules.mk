@@ -20,7 +20,7 @@ $(eval $(call Variable_rule,target/compile_flags,$$(CXX) $$(CXXFLAGS)))
 $(eval $(call Variable_rule,target/link_flags,$$(CXX) $$(LDFLAGS) $$(LDLIBS)))
 
 target/manpages/%: manpages/%.adoc
-	asciidoctor -b manpage -D target/manpages $<
+	asciidoctor -D target/manpages $<
 
 # $(call Object_file,%) $(call Dependency_file,%)&: src/%.cpp target/compile_flags | target/object_files target/dependencies
 $(call Object_file,%): src/%.cpp target/compile_flags | target/object_files target/dependencies

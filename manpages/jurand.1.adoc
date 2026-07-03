@@ -1,5 +1,6 @@
 = jurand(1)
 :doctype: manpage
+:backend: manpage
 :mansource: JURAND
 :manmanual: Jurand Manual
 
@@ -54,7 +55,7 @@ Examples of usage in a *.spec* file:
 - *jurand -i -s -a module-api module-impl module-tests -n Nullable*
 - *jurand -i -s -a src -p org[.]jspecify[.]annotations -m org[.]jspecify*
 
-=== Import patterns:
+=== Import patterns
 - Import statements present in Java source file:
 
     1) import java.lang.Runnable;
@@ -108,7 +109,11 @@ Examples of usage in a *.spec* file:
     Pattern 'EI_EXPOSE_REP' does not match anything.
 
 == REPORTING BUGS
-Bugs should be reported through the Jurand issue tracker at Github: https://github.com/fedora-java/jurand/issues.
+Bugs should be reported through the issue tracker at Github: https://github.com/fedora-java/jurand/issues.
 
 == AUTHOR
 Written by Marián Konček.
+
+== COPYRIGHT
+Copyright (C) 2023 Red Hat, Inc.
+Licensed under the Apache License, Version 2.0.
